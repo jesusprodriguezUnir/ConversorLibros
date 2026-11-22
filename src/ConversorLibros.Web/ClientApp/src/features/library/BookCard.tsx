@@ -1,0 +1,83 @@
+import { FolderOpen, Clock, Layers } from "lucide-react";
+import type { LibraryItemDto } from "../../shared/api/types";
+import { Badge } from "../../shared/components/Badge";
+import { Button } from "../../shared/components/Button";
+import { formatDuration, getBookInitials } from "../../shared/utils/format";
+
+interface BookCardProps {
+  book: LibraryItemDto;
+  onOpen: (id: string) => void;
+  opening?: boolean;
+}
+
+export function BookCard({ book, onOpen, opening = false }: BookCardProps) {
+  const duration = formatDuration(book.durationSeconds);
+
+  return (
+    <article className="group bg-[#131720] border border-[#252C3D] hover:border-[#3A4660] rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5 shadow-lg shadow-black/20">
+      <div className="relative aspect-[3/4] bg-gradient-to-br from-[#1B2233] via-[#131824] to-[#0D1018] overflow-hidden border-b border-[#252C3D]">
+        {book.hasCover && book.coverUrl ? (
+          <img
+            src={book.coverUrl}
+            alt={`Portada de ${book.title}`}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center relative">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(245,158,11,0.14),transparent_60%)]" />
+            <div className="w-16 h-16 rounded-2xl bg-[#1B2130] border border-[#2F3952] flex items-center justify-center mb-2 shadow-inner">
+              <span className="text-xl font-bold tracking-wider text-[#FBBF24]">
+                {getBookInitials(book.title)}
+              </span>
+            </div>
+            <span className="text-[11px] uppercase tracking-widest text-[#64728C]">
+              Audiolibro
+            </span>
+          </div>
+        )}
+
+        <div className="absolute top-3 left-3">
+          <Badge tone={book.format === "opus" ? "accent" : "neutral"} className="backdrop-blur-md">
+            {book.format.toUpperCase()}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="p-4 flex flex-col flex-1 justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-[#EDF0F7] line-clamp-2 leading-snug">
+            {book.title}
+          </h3>
+          <p className="text-xs text-[#93A0B8] mt-1 truncate">{book.author}</p>
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs text-[#64728C]">
+            <span className="inline-flex items-center gap-1">
+              <Layers className="w-3.5 h-3.5" />
+              {book.format === "opus"
+                ? `${book.chapterCount} ${book.chapterCount === 1 ? "capítulo" : "capítulos"}`
+                : "Fichero único"}
+            </span>
+            {duration && (
+              <span className="inline-flex items-center gap-1 font-mono">
+                <Clock className="w-3.5 h-3.5" />
+                {duration}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          className="w-full"
+          loading={opening}
+          icon={<FolderOpen className="w-3.5 h-3.5" />}
+          onClick={() => onOpen(book.id)}
+        >
+          Abrir carpeta
+        </Button>
+      </div>
+    </article>
+  );
+}

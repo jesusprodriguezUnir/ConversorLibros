@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastProvider } from "../shared/components/Toast";
 import { ConversionProvider } from "./ConversionContext";
 import { AppShell } from "./AppShell";
+import { LibraryPage } from "../features/library/LibraryPage";
 
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -19,7 +20,7 @@ export function App() {
           <Routes>
             <Route element={<AppShell />}>
               <Route path="/" element={<Navigate to="/biblioteca" replace />} />
-              <Route path="/biblioteca" element={<PlaceholderPage title="Biblioteca" />} />
+              <Route path="/biblioteca" element={<LibraryPage />} />
               <Route path="/convertir" element={<PlaceholderPage title="Nueva conversión" />} />
               <Route path="/ajustes" element={<PlaceholderPage title="Ajustes" />} />
               <Route path="*" element={<Navigate to="/biblioteca" replace />} />
