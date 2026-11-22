@@ -17,6 +17,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSingleton<JsonSettingsStore>();
 builder.Services.AddSingleton<UploadedBookStore>();
+builder.Services.AddSingleton<IConversionRunner, CoreConversionRunner>();
+builder.Services.AddSingleton<ConversionJobManager>();
 
 var app = builder.Build();
 
@@ -27,6 +29,7 @@ app.MapSettingsEndpoints();
 app.MapFileSystemEndpoints();
 app.MapLibraryEndpoints();
 app.MapBookEndpoints();
+app.MapConversionEndpoints();
 
 app.MapFallback(async context =>
 {
