@@ -27,3 +27,4 @@ out-*/
 node_modules/
 src/ConversorLibros.Web/wwwroot/
 *.tsbuildinfo
+.vite/

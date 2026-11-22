@@ -1,10 +1,8 @@
 import { useRef, useState, type DragEvent, type ChangeEvent } from "react";
-import { Upload, BookOpen, RefreshCcw, Loader2 } from "lucide-react";
+import { Upload, RefreshCcw, Loader2, CheckCircle2 } from "lucide-react";
 import type { InspectedBookDto } from "../../shared/api/types";
-import { Badge } from "../../shared/components/Badge";
 import { Button } from "../../shared/components/Button";
 import { Card } from "../../shared/components/Card";
-import { getBookInitials } from "../../shared/utils/format";
 
 interface EpubDropzoneProps {
   book: InspectedBookDto | null;
@@ -74,37 +72,15 @@ export function EpubDropzone({ book, loading, disabled = false, onSelectFile }: 
           </p>
         </div>
       ) : (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="w-16 h-24 rounded-xl overflow-hidden bg-[#1B2130] border border-[#2A3347] shrink-0 flex items-center justify-center">
-            {book.hasCover && book.coverUrl ? (
-              <img
-                src={book.coverUrl}
-                alt={`Portada de ${book.title}`}
-                className="w-full h-full object-cover"
-              />
+        <div className="flex items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-xs text-[#93A0B8]">
+            {loading ? (
+              <Loader2 className="w-3.5 h-3.5 text-[#F59E0B] animate-spin" />
             ) : (
-              <span className="text-sm font-bold text-[#FBBF24]">
-                {getBookInitials(book.title)}
-              </span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="accent">EPUB</Badge>
-              <Badge tone="neutral">
-                <BookOpen className="w-3 h-3" />
-                {book.chapters.length} {book.chapters.length === 1 ? "capítulo" : "capítulos"}
-              </Badge>
-              <Badge tone="neutral" className="font-mono uppercase">
-                {book.language}
-              </Badge>
-            </div>
-            <h2 className="text-base font-semibold text-[#EDF0F7] mt-2 truncate">
-              {book.title}
-            </h2>
-            <p className="text-sm text-[#93A0B8] truncate">{book.author}</p>
-          </div>
+            {loading ? "Analizando EPUB…" : "Libro cargado"}
+          </p>
 
           <Button
             variant="secondary"

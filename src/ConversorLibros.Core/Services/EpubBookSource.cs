@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using AngleSharp;
@@ -6,6 +8,7 @@ using ConversorLibros.Core.Abstractions;
 using ConversorLibros.Core.Models;
 using VersOne.Epub;
 using VersOne.Epub.Options;
+using VersOne.Epub.Schema;
 
 namespace ConversorLibros.Core.Services;
 
@@ -87,7 +90,7 @@ public sealed partial class EpubBookSource : IBookSource
         }
 
         var cover = await epub.ReadCoverAsync().ConfigureAwait(false);
-        return new Book(title, author, language, chapters, cover);
+        return new Book(title, author, language, chapters, cover, Metadata: BuildMetadata(epub.Schema.Package.Metadata));
     }
 
     /// <summary>
@@ -185,6 +188,138 @@ public sealed partial class EpubBookSource : IBookSource
         return false;
     }
 
+    /// <summary>
+    /// Maps the EPUB package metadata to <see cref="BookMetadata"/>. Every field is best-effort and may be null.
+    /// </summary>
+    internal static BookMetadata BuildMetadata(EpubMetadata package)
+    {
+        var publisher = package.Publishers
+            .Select(p => Clean(p.Publisher))
+            .FirstOrDefault(p => p is not null);
+
+        var description = HtmlToPlainText(package.Descriptions
+            .Select(d => d.Description)
+            .FirstOrDefault(d => !string.IsNullOrWhiteSpace(d)));
+
+        var subjects = package.Subjects
+            .Select(s => Clean(s.Subject))
+            .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var (series, seriesIndex) = ReadSeries(package.MetaItems);
+
+        return new BookMetadata(
+            Publisher: publisher,
+            PublishedDate: ReadPublishedDate(package.Dates),
+            Description: description,
+            Isbn: ReadIsbn(package.Identifiers),
+            Subjects: subjects,
+            Series: series,
+            SeriesIndex: seriesIndex);
+    }
+
+    private const string CalibreUnknownDate = "0101-01-01";
+
+    private static string? ReadPublishedDate(IEnumerable<EpubMetadataDate> dates)
+    {
+        // Calibre writes 0101-01-01 when it does not know the date; that is not a real publication date.
+        var valid = dates
+            .Where(d => Clean(d.Date) is { } date && !date.StartsWith(CalibreUnknownDate, StringComparison.Ordinal))
+            .ToList();
+
+        var chosen = valid.FirstOrDefault(d => string.Equals(Clean(d.Event), "publication", StringComparison.OrdinalIgnoreCase))
+            ?? valid.FirstOrDefault();
+
+        return Clean(chosen?.Date);
+    }
+
+    private static string? ReadIsbn(IEnumerable<EpubMetadataIdentifier> identifiers)
+    {
+        foreach (var identifier in identifiers)
+        {
+            var value = Clean(identifier.Identifier) ?? string.Empty;
+            var scheme = Clean(identifier.Scheme) ?? string.Empty;
+            var isUrn = value.StartsWith("urn:isbn:", StringComparison.OrdinalIgnoreCase);
+            var candidate = (isUrn ? value["urn:isbn:".Length..] : value).Replace("-", string.Empty).Replace(" ", string.Empty);
+
+            if (!IsbnShapeRegex().IsMatch(candidate))
+            {
+                continue;
+            }
+
+            // Bare digits only count when no other scheme claims them (e.g. a DOI or UUID would not match the shape anyway).
+            if (scheme.Equals("ISBN", StringComparison.OrdinalIgnoreCase) || isUrn || scheme.Length == 0)
+            {
+                return candidate.ToUpperInvariant();
+            }
+        }
+
+        return null;
+    }
+
+    private static (string? Name, double? Index) ReadSeries(IEnumerable<EpubMetadataMeta> metaItems)
+    {
+        var items = metaItems.ToList();
+
+        // EPUB 3: <meta property="belongs-to-collection" id="c1">Name</meta> and
+        // <meta refines="#c1" property="group-position">2</meta>.
+        var collection = items.FirstOrDefault(m =>
+            string.Equals(Clean(m.Property), "belongs-to-collection", StringComparison.OrdinalIgnoreCase)
+            && Clean(m.Content) is not null);
+
+        if (collection is not null)
+        {
+            var collectionId = Clean(collection.Id);
+            var position = collectionId is null
+                ? null
+                : items.FirstOrDefault(m =>
+                    string.Equals(Clean(m.Property), "group-position", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(Clean(m.Refines)?.TrimStart('#'), collectionId, StringComparison.Ordinal));
+
+            return (Clean(collection.Content), ParseIndex(position?.Content));
+        }
+
+        // Calibre: <meta name="calibre:series" content="Name"/> and <meta name="calibre:series_index" content="2"/>.
+        var calibreName = Clean(items.FirstOrDefault(m => string.Equals(Clean(m.Name), "calibre:series", StringComparison.OrdinalIgnoreCase))?.Content);
+        if (calibreName is null)
+        {
+            return (null, null);
+        }
+
+        var calibreIndex = items.FirstOrDefault(m => string.Equals(Clean(m.Name), "calibre:series_index", StringComparison.OrdinalIgnoreCase));
+        return (calibreName, ParseIndex(calibreIndex?.Content));
+    }
+
+    private static double? ParseIndex(string? value) =>
+        double.TryParse(Clean(value), NumberStyles.Float, CultureInfo.InvariantCulture, out var index) ? index : null;
+
+    /// <summary>
+    /// Converts a metadata description (which may contain HTML) to plain paragraphs separated by blank lines.
+    /// </summary>
+    internal static string? HtmlToPlainText(string? html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+        {
+            return null;
+        }
+
+        var withBreaks = BlockBreakRegex().Replace(html, "\n\n");
+        var withoutTags = TagRegex().Replace(withBreaks, string.Empty);
+        var decoded = WebUtility.HtmlDecode(withoutTags);
+
+        var paragraphs = decoded
+            .Split("\n\n")
+            .Select(p => CollapseWhitespaceRegex().Replace(p, " ").Trim())
+            .Where(p => p.Length > 0);
+
+        var text = string.Join("\n\n", paragraphs);
+        return text.Length > 0 ? text : null;
+    }
+
+    private static string? Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
     private static string NormalizePath(string path) => path.Replace('\\', '/');
 
     private static async Task<List<EpubNavigationItemRef>> ReadNavigationAsync(EpubBookRef epub)
@@ -239,4 +374,13 @@ public sealed partial class EpubBookSource : IBookSource
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex CollapseWhitespaceRegex();
+
+    [GeneratedRegex(@"<br\s*/?>|</(p|div|li|h[1-6]|blockquote)\s*>", RegexOptions.IgnoreCase)]
+    private static partial Regex BlockBreakRegex();
+
+    [GeneratedRegex(@"<[^>]+>")]
+    private static partial Regex TagRegex();
+
+    [GeneratedRegex(@"^(\d{9}[\dXx]|\d{13})$")]
+    private static partial Regex IsbnShapeRegex();
 }

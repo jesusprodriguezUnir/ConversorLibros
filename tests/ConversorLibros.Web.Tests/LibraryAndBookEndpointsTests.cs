@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Net;
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -124,6 +125,15 @@ public sealed class LibraryAndBookEndpointsTests : IDisposable
         var chapter = Assert.Single(inspected.Chapters);
         Assert.Equal(1, chapter.Index);
         Assert.True(chapter.CharCount > 0);
+        // RawText includes the <h1> heading ("Capítulo 1" = 2 words) plus the 9-word paragraph.
+        Assert.Equal(11, chapter.WordCount);
+        Assert.Equal(4, chapter.EstimatedSeconds);
+        Assert.True(chapter.IsLikelyFrontMatter);
+        Assert.Contains("Este es un párrafo", chapter.Excerpt);
+        Assert.Equal(11, inspected.TotalWordCount);
+        Assert.Equal(4, inspected.TotalEstimatedSeconds);
+        Assert.NotNull(inspected.Metadata);
+        Assert.Null(inspected.Metadata.Isbn);
         Assert.True(inspected.HasCover);
         Assert.NotNull(inspected.CoverUrl);
 
@@ -142,6 +152,67 @@ public sealed class LibraryAndBookEndpointsTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task ChapterPreview_ReturnsNormalizedTextWithoutDigits()
+    {
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var inspected = await UploadAsync(client, CreateMinimalEpubBytes("Hay 1950 naves en la flota y cada una tiene cuarenta tripulantes."));
+
+        var response = await client.GetAsync($"/api/books/{inspected.UploadId}/chapters/1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var preview = await response.Content.ReadFromJsonAsync<ChapterPreviewDto>();
+        Assert.NotNull(preview);
+        Assert.Equal(1, preview.Index);
+        Assert.Equal("Capítulo 1", preview.Title);
+        Assert.DoesNotMatch(@"\d", preview.Text);
+        Assert.Contains("naves", preview.Text);
+        Assert.False(preview.Truncated);
+    }
+
+    [Fact]
+    public async Task ChapterPreview_LongChapterIsTruncatedAtWordBoundary()
+    {
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var longBody = string.Join(' ', Enumerable.Repeat("palabra", 1000));
+        var inspected = await UploadAsync(client, CreateMinimalEpubBytes(longBody));
+
+        var preview = await client.GetFromJsonAsync<ChapterPreviewDto>($"/api/books/{inspected.UploadId}/chapters/1");
+
+        Assert.NotNull(preview);
+        Assert.True(preview.Truncated);
+        Assert.True(preview.Text.Length <= 4000);
+        Assert.Equal("palabra", preview.Text.Split(' ').Last());
+    }
+
+    [Fact]
+    public async Task ChapterPreview_UnknownChapterOrUploadReturnsNotFound()
+    {
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var inspected = await UploadAsync(client, CreateMinimalEpubBytes());
+
+        var missingChapter = await client.GetAsync($"/api/books/{inspected.UploadId}/chapters/99");
+        var missingBook = await client.GetAsync("/api/books/unknown-id/chapters/1");
+
+        Assert.Equal(HttpStatusCode.NotFound, missingChapter.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, missingBook.StatusCode);
+    }
+
+    private static async Task<InspectedBookDto> UploadAsync(HttpClient client, byte[] epubBytes)
+    {
+        using var form = new MultipartFormDataContent();
+        var content = new ByteArrayContent(epubBytes);
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/epub+zip");
+        form.Add(content, "file", "prueba.epub");
+
+        var response = await client.PostAsync("/api/books/inspect", form);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<InspectedBookDto>())!;
+    }
+
     private WebApplicationFactory<Program> CreateFactory()
     {
         var settingsPath = Path.Combine(_tempRoot, "settings.json");
@@ -158,7 +229,7 @@ public sealed class LibraryAndBookEndpointsTests : IDisposable
         });
     }
 
-    private static byte[] CreateMinimalEpubBytes()
+    private static byte[] CreateMinimalEpubBytes(string chapterBody = "Este es un párrafo de prueba para el libro.")
     {
         using var ms = new MemoryStream();
         using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
@@ -211,11 +282,11 @@ public sealed class LibraryAndBookEndpointsTests : IDisposable
                 </ncx>
                 """);
 
-            WriteEntry(zip, "OEBPS/ch1.xhtml", """
+            WriteEntry(zip, "OEBPS/ch1.xhtml", $"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <html xmlns="http://www.w3.org/1999/xhtml">
                   <head><title>Capítulo 1</title></head>
-                  <body><h1>Capítulo 1</h1><p>Este es un párrafo de prueba para el libro.</p></body>
+                  <body><h1>Capítulo 1</h1><p>{chapterBody}</p></body>
                 </html>
                 """);
 

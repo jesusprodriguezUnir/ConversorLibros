@@ -6,6 +6,7 @@ import type { InspectedBookDto, SettingsResponse } from "../../shared/api/types"
 import { useToast } from "../../shared/components/Toast";
 import { useConversion } from "../../app/ConversionContext";
 import { EpubDropzone } from "./EpubDropzone";
+import { BookDetailsCard } from "./BookDetailsCard";
 import { ChapterList } from "./ChapterList";
 import { ConversionOptions } from "./ConversionOptions";
 import { ProgressPanel } from "./ProgressPanel";
@@ -89,6 +90,20 @@ export function NewConversionPage() {
     setSelectedChapters(new Set());
   };
 
+  const handleInvert = () => {
+    if (!book) return;
+    setSelectedChapters((prev) => {
+      const next = new Set(book.chapters.filter((c) => !prev.has(c.index)).map((c) => c.index));
+      return next;
+    });
+  };
+
+  const handleDeselectFrontMatter = () => {
+    if (!book) return;
+    const frontMatter = new Set(book.chapters.filter((c) => c.isLikelyFrontMatter).map((c) => c.index));
+    setSelectedChapters((prev) => new Set(Array.from(prev).filter((index) => !frontMatter.has(index))));
+  };
+
   const canStart =
     !isRunning &&
     !inspecting &&
@@ -158,13 +173,19 @@ export function NewConversionPage() {
             onSelectFile={handleSelectFile}
           />
 
+          {book && <BookDetailsCard book={book} />}
+
           <ChapterList
+            key={book?.uploadId ?? "no-book"}
+            uploadId={book?.uploadId ?? ""}
             chapters={book?.chapters ?? []}
             selected={selectedChapters}
             disabled={isRunning}
             onToggle={handleToggleChapter}
             onSelectAll={handleSelectAll}
             onSelectNone={handleSelectNone}
+            onInvert={handleInvert}
+            onDeselectFrontMatter={handleDeselectFrontMatter}
           />
         </div>
 

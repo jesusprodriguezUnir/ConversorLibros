@@ -1,4 +1,5 @@
 import type {
+  ChapterPreviewDto,
   ConversionStateDto,
   FileSystemBrowseResponse,
   InspectedBookDto,
@@ -62,6 +63,13 @@ export const api = {
       body: form,
     });
     return parseJson<InspectedBookDto>(res);
+  },
+
+  async getChapterPreview(uploadId: string, index: number): Promise<ChapterPreviewDto> {
+    const res = await fetch(
+      `/api/books/${encodeURIComponent(uploadId)}/chapters/${index}`
+    );
+    return parseJson<ChapterPreviewDto>(res);
   },
 
   async getCurrentConversion(): Promise<ConversionStateDto> {

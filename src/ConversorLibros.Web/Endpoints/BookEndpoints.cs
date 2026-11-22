@@ -36,6 +36,8 @@ public static class BookEndpoints
                 var book = entry.Book;
                 var hasCover = book.CoverImage is { Length: > 0 };
 
+                var chapters = book.Chapters.Select(BookDtoMapper.ToSummary).ToList();
+
                 var dto = new InspectedBookDto(
                     UploadId: entry.UploadId,
                     Title: book.Title,
@@ -43,10 +45,11 @@ public static class BookEndpoints
                     Language: string.IsNullOrWhiteSpace(book.Language) ? "en" : book.Language,
                     HasCover: hasCover,
                     CoverUrl: hasCover ? $"/api/books/{entry.UploadId}/cover" : null,
-                    Chapters: book.Chapters
-                        .Select(c => new ChapterSummaryDto(c.Index, c.Title, c.RawText.Length))
-                        .ToList(),
-                    FolderName: AudiobookFileNames.SanitizeComponent(book.Title));
+                    Chapters: chapters,
+                    FolderName: AudiobookFileNames.SanitizeComponent(book.Title),
+                    Metadata: BookDtoMapper.ToMetadata(book.Metadata),
+                    TotalWordCount: chapters.Sum(c => c.WordCount),
+                    TotalEstimatedSeconds: chapters.Sum(c => c.EstimatedSeconds));
 
                 return Results.Ok(dto);
             }
@@ -67,6 +70,20 @@ public static class BookEndpoints
                 ? "image/jpeg"
                 : entry.Book.CoverMimeType;
             return Results.File(entry.Book.CoverImage, mime);
+        });
+
+        group.MapGet("/{uploadId}/chapters/{index:int}", (string uploadId, int index, UploadedBookStore store) =>
+        {
+            if (!store.TryGet(uploadId, out var entry) || entry is null)
+            {
+                return Results.NotFound();
+            }
+
+            // Look up by the chapter's own Index: indexes are not contiguous once front matter is dropped.
+            var chapter = entry.Book.Chapters.FirstOrDefault(c => c.Index == index);
+            return chapter is null
+                ? Results.NotFound()
+                : Results.Ok(BookDtoMapper.ToPreview(chapter));
         });
 
         return app;

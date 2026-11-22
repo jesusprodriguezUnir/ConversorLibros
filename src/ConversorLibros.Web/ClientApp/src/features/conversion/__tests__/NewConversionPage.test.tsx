@@ -50,9 +50,28 @@ const inspectedBook: InspectedBookDto = {
   hasCover: true,
   coverUrl: "/api/books/up-123/cover",
   chapters: [
-    { index: 1, title: "Los psicohistoriadores", charCount: 4500 },
-    { index: 2, title: "Los enciclopedistas", charCount: 6200 },
+    {
+      index: 1,
+      title: "Los psicohistoriadores",
+      charCount: 4500,
+      wordCount: 750,
+      estimatedSeconds: 300,
+      isLikelyFrontMatter: false,
+      excerpt: "Hace doce mil años…",
+    },
+    {
+      index: 2,
+      title: "Los enciclopedistas",
+      charCount: 6200,
+      wordCount: 1050,
+      estimatedSeconds: 420,
+      isLikelyFrontMatter: false,
+      excerpt: "Trantor era un mundo…",
+    },
   ],
+  metadata: null,
+  totalWordCount: 1800,
+  totalEstimatedSeconds: 720,
 };
 
 function renderPage() {

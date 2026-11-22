@@ -60,6 +60,30 @@ export interface ChapterSummaryDto {
   index: number;
   title: string;
   charCount: number;
+  wordCount: number;
+  estimatedSeconds: number;
+  isLikelyFrontMatter: boolean;
+  excerpt: string;
+}
+
+export interface BookMetadataDto {
+  publisher: string | null;
+  publishedDate: string | null;
+  description: string | null;
+  isbn: string | null;
+  subjects: string[];
+  series: string | null;
+  seriesIndex: number | null;
+}
+
+export interface ChapterPreviewDto {
+  index: number;
+  title: string;
+  wordCount: number;
+  estimatedSeconds: number;
+  isLikelyFrontMatter: boolean;
+  text: string;
+  truncated: boolean;
 }
 
 export interface InspectedBookDto {
@@ -71,6 +95,9 @@ export interface InspectedBookDto {
   coverUrl: string | null;
   chapters: ChapterSummaryDto[];
   folderName: string;
+  metadata: BookMetadataDto | null;
+  totalWordCount: number;
+  totalEstimatedSeconds: number;
 }
 
 export interface StartConversionRequest {

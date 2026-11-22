@@ -15,6 +15,23 @@ export function formatDuration(totalSeconds: number | null): string | null {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+/** Spanish duration for chapter and book estimates, e.g. "45 s", "12 min", "2 h 05 min". */
+export function formatSpanishDuration(totalSeconds: number): string {
+  const rounded = Math.max(0, Math.round(totalSeconds));
+  if (rounded < 60) {
+    return `${rounded} s`;
+  }
+
+  const totalMinutes = Math.round(rounded / 60);
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours} h ${String(minutes).padStart(2, "0")} min`;
+}
+
 export function formatCharEstimate(charCount: number): string {
   if (charCount < 1000) {
     return `${charCount} car.`;
