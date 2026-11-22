@@ -18,6 +18,13 @@ dotnet run --project src/ConversorLibros.Cli -- convert book.epub --dry-run --ch
 dotnet run --project src/ConversorLibros.Cli -- convert book.epub --model-dir <piper_model_dir> --voice 0 --speed 1.0 --format opus --out ./out
 dotnet run --project src/ConversorLibros.Cli -- convert book.epub --model-dir <piper_model_dir> --format m4b --delete-wav --out ./out
 
+# Web UI (ASP.NET Core + React/Vite, default http://localhost:5180)
+# Dev mode (starts backend on :5180 + Vite on :5173 and opens the browser):
+.\dev.ps1
+# Production build (single server on http://localhost:5180):
+cd src/ConversorLibros.Web/ClientApp && npm install && npm run build
+dotnet run --project src/ConversorLibros.Web
+
 # App (MAUI, Windows only; NOT in the .sln, build it explicitly)
 dotnet build src/ConversorLibros.App -f net10.0-windows10.0.19041.0
 ```

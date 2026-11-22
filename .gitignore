@@ -22,3 +22,8 @@ cache/
 out/
 out-*/
 *.log
+
+# Web frontend
+node_modules/
+src/ConversorLibros.Web/wwwroot/
+*.tsbuildinfo
