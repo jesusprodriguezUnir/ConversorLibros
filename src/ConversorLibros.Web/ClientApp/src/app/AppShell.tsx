@@ -90,10 +90,23 @@ export function AppShell() {
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8">
+      <main className="flex-1 min-w-0 overflow-y-auto flex flex-col">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 lg:px-10 py-8">
           <Outlet />
         </div>
+        <footer className="w-full max-w-7xl mx-auto px-6 lg:px-10 py-4 border-t border-[#1F2536] flex flex-wrap items-center justify-end gap-x-6 gap-y-2 text-[11px] text-[#64728C]">
+          <span className="footer__credit">
+            Diseño y desarrollo web:{" "}
+            <a
+              href="https://webdespega.com/"
+              target="_blank"
+              rel="noopener"
+              className="underline underline-offset-2 decoration-1 hover:text-[#F59E0B] focus-visible:text-[#F59E0B] transition-colors"
+            >
+              webdespega.com
+            </a>
+          </span>
+        </footer>
       </main>
     </div>
   );
