@@ -16,6 +16,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddSingleton<JsonSettingsStore>();
+builder.Services.AddSingleton<UploadedBookStore>();
 
 var app = builder.Build();
 
@@ -24,6 +25,8 @@ app.UseStaticFiles();
 
 app.MapSettingsEndpoints();
 app.MapFileSystemEndpoints();
+app.MapLibraryEndpoints();
+app.MapBookEndpoints();
 
 app.MapFallback(async context =>
 {
