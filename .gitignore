@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+.vs/
+
+# Modelos TTS y artefactos pesados
+*.onnx
+*.bin
+*.safetensors
+models/
+
+# Audios y libros de prueba
+*.wav
+*.mp3
+*.m4b
+*.opus
+*.epub
+cache/
+out/
+out-*/
+*.log

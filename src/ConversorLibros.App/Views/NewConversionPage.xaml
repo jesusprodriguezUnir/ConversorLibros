@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ConversorLibros.App.ViewModels"
+             x:Class="ConversorLibros.App.Views.NewConversionPage"
+             x:DataType="vm:NewConversionViewModel"
+             Title="Nueva conversión">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16">
+            <Label Text="Nueva conversión" Style="{StaticResource Headline}" />
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Button Text="Elegir EPUB…" Command="{Binding PickEpubCommand}" HorizontalOptions="Start" />
+                    <Label Text="{Binding BookTitle}" Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Capítulos" Style="{StaticResource SectionTitle}" />
+                    <CollectionView ItemsSource="{Binding Chapters}" HeightRequest="220">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ChapterItem">
+                                <HorizontalStackLayout Spacing="8" Padding="0,4">
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                    <Label Text="{Binding DisplayTitle}" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <HorizontalStackLayout Spacing="8">
+                        <CheckBox IsChecked="{Binding Translate, Mode=TwoWay}" />
+                        <Label Text="Traducir de" VerticalOptions="Center" />
+                        <Entry Text="{Binding SourceLanguage}" WidthRequest="70" IsEnabled="{Binding Translate}" />
+                        <Label Text="{Binding TargetLanguage, StringFormat='a {0}'}" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="{Binding Speed, StringFormat='Velocidad: {0:F2}x'}" />
+                    <Slider Minimum="0.5" Maximum="1.5" Value="{Binding Speed, Mode=TwoWay}" />
+
+                    <Picker Title="Formato" ItemsSource="{Binding FormatOptions}" ItemDisplayBinding="{Binding Label}"
+                            SelectedItem="{Binding SelectedFormat, Mode=TwoWay}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="{Binding Stage}" Style="{StaticResource CardTitle}" />
+                    <ProgressBar Progress="{Binding ProgressFraction}" ProgressColor="{StaticResource Accent}" />
+                    <Label Text="{Binding CurrentChapter}" Style="{StaticResource Muted}" />
+                    <Label Text="{Binding Timing}" Style="{StaticResource Muted}" />
+
+                    <HorizontalStackLayout Spacing="12">
+                        <Button Text="Empezar" Command="{Binding StartCommand}" />
+                        <Button Text="Cancelar" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}"
+                                Style="{StaticResource SecondaryButton}" />
+                        <Button Text="Registro" Command="{Binding ToggleLogCommand}"
+                                Style="{StaticResource SecondaryButton}" />
+                    </HorizontalStackLayout>
+
+                    <CollectionView ItemsSource="{Binding Log}" IsVisible="{Binding ShowLog}" HeightRequest="160">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Label Text="{Binding .}" Style="{StaticResource Muted}" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

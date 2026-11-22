@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ConversorLibros.App.ViewModels"
+             x:Class="ConversorLibros.App.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Title="Ajustes">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16">
+            <Label Text="Ajustes" Style="{StaticResource Headline}" />
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Rutas" Style="{StaticResource SectionTitle}" />
+
+                    <Label Text="Carpeta del modelo Piper (.onnx, tokens.txt, espeak-ng-data)" Style="{StaticResource Muted}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Entry Text="{Binding PiperModelDir}" />
+                        <Button Grid.Column="1" Text="Examinar…" Command="{Binding PickModelDirCommand}"
+                                Style="{StaticResource SecondaryButton}" />
+                    </Grid>
+
+                    <Label Text="Carpeta de salida (audiolibros y caché)" Style="{StaticResource Muted}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Entry Text="{Binding OutputRoot}" />
+                        <Button Grid.Column="1" Text="Examinar…" Command="{Binding PickOutputRootCommand}"
+                                Style="{StaticResource SecondaryButton}" />
+                    </Grid>
+
+                    <Label Text="ffmpeg (ruta manual, vacío = detección automática)" Style="{StaticResource Muted}" />
+                    <Entry Text="{Binding FfmpegOverride}" Placeholder="Automático" />
+                    <Label Text="{Binding FfmpegStatus}" Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Ollama (traducción)" Style="{StaticResource SectionTitle}" />
+
+                    <Label Text="Endpoint" Style="{StaticResource Muted}" />
+                    <Entry Text="{Binding OllamaUrl}" />
+
+                    <Label Text="Modelo" Style="{StaticResource Muted}" />
+                    <Entry Text="{Binding OllamaModel}" />
+
+                    <HorizontalStackLayout Spacing="12">
+                        <Button Text="Probar conexión" Command="{Binding TestConnectionCommand}" />
+                    </HorizontalStackLayout>
+                    <Label Text="{Binding ConnectionStatus}" Style="{StaticResource Muted}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <HorizontalStackLayout Spacing="12">
+                <Button Text="Guardar" Command="{Binding SaveCommand}" />
+                <Label Text="{Binding SaveStatus}" Style="{StaticResource Muted}" VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
