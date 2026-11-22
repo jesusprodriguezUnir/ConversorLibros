@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { ConversionProvider } from "../ConversionContext";
 import { AppShell } from "../AppShell";
+import { ToastProvider } from "../../shared/components/Toast";
 import type { ConversionStateDto } from "../../shared/api/types";
 
 class MockEventSource {
@@ -68,9 +69,11 @@ describe("AppShell", () => {
 
     render(
       <MemoryRouter initialEntries={["/biblioteca"]}>
-        <ConversionProvider>
-          <AppShell />
-        </ConversionProvider>
+        <ToastProvider>
+          <ConversionProvider>
+            <AppShell />
+          </ConversionProvider>
+        </ToastProvider>
       </MemoryRouter>
     );
 
@@ -99,9 +102,11 @@ describe("AppShell", () => {
 
     render(
       <MemoryRouter initialEntries={["/biblioteca"]}>
-        <ConversionProvider>
-          <AppShell />
-        </ConversionProvider>
+        <ToastProvider>
+          <ConversionProvider>
+            <AppShell />
+          </ConversionProvider>
+        </ToastProvider>
       </MemoryRouter>
     );
 
@@ -122,9 +127,11 @@ describe("AppShell", () => {
 
     render(
       <MemoryRouter initialEntries={["/biblioteca"]}>
-        <ConversionProvider>
-          <AppShell />
-        </ConversionProvider>
+        <ToastProvider>
+          <ConversionProvider>
+            <AppShell />
+          </ConversionProvider>
+        </ToastProvider>
       </MemoryRouter>
     );
 

@@ -1,4 +1,5 @@
-import { FolderOpen, Clock, Layers } from "lucide-react";
+import { FolderOpen, Clock, Layers, Download } from "lucide-react";
+import { api } from "../../shared/api/client";
 import type { LibraryItemDto } from "../../shared/api/types";
 import { Badge } from "../../shared/components/Badge";
 import { Button } from "../../shared/components/Button";
@@ -67,16 +68,27 @@ export function BookCard({ book, onOpen, opening = false }: BookCardProps) {
           </div>
         </div>
 
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full"
-          loading={opening}
-          icon={<FolderOpen className="w-3.5 h-3.5" />}
-          onClick={() => onOpen(book.id)}
-        >
-          Abrir carpeta
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            loading={opening}
+            icon={<FolderOpen className="w-3.5 h-3.5" />}
+            onClick={() => onOpen(book.id)}
+          >
+            Abrir carpeta
+          </Button>
+          <a
+            href={api.libraryDownloadUrl(book.id)}
+            download
+            title={book.format === "opus" ? "Descarga un ZIP con los capítulos y la portada" : "Descarga el archivo M4B"}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#252C3D] bg-[#1B2130] text-[#EDF0F7] hover:border-[#3A4660] transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Descargar
+          </a>
+        </div>
       </div>
     </article>
   );

@@ -12,9 +12,13 @@ const initialSettings: SettingsResponse = {
     ollamaUrl: "http://localhost:11434",
     ollamaModel: "qwen3:8b",
     ffmpegOverride: "",
+    defaultSpeed: 1.0,
+    defaultFormat: "opus",
   },
   piper: { isValid: true, message: "Modelo Piper listo para sintetizar." },
   ffmpeg: { found: true, resolvedPath: "C:\\ffmpeg\\bin\\ffmpeg.exe", message: "Usando: C:\\ffmpeg\\bin\\ffmpeg.exe" },
+  effectivePiperModelDir: "C:\\models\\piper",
+  piperAutoDetected: false,
 };
 
 describe("SettingsPage", () => {
@@ -133,6 +137,28 @@ describe("SettingsPage", () => {
     await waitFor(() => {
       expect(screen.getByText(/el modelo 'qwen3:8b' está disponible/i)).toBeInTheDocument();
       expect(screen.getByRole("option", { name: "llama3.1:8b" })).toBeInTheDocument();
+    });
+  });
+
+  it("shows the auto-detected Piper model badge", async () => {
+    const autoDetected: SettingsResponse = {
+      ...initialSettings,
+      effectivePiperModelDir: "D:\\Modelos\\piper-es",
+      piperAutoDetected: true,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: async () => autoDetected })
+    );
+
+    render(
+      <ToastProvider>
+        <SettingsPage />
+      </ToastProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/detectado automáticamente: d:\\modelos\\piper-es/i)).toBeInTheDocument();
     });
   });
 

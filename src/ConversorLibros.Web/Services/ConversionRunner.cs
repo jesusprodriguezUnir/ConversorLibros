@@ -26,6 +26,7 @@ public interface IConversionRunner
 
 /// <summary>
 /// Executes the Core conversion pipeline and audiobook packaging on a background thread.
+/// Output layout: <c>&lt;OutputRoot&gt;/&lt;Title&gt;/</c> holds the final audio; <c>work/</c> holds chapter WAVs and caches.
 /// </summary>
 public sealed class CoreConversionRunner : IConversionRunner
 {
@@ -33,6 +34,12 @@ public sealed class CoreConversionRunner : IConversionRunner
     private const string TargetLanguage = "es";
 
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(10) };
+    private readonly PiperModelLocator _locator;
+
+    public CoreConversionRunner(PiperModelLocator locator)
+    {
+        _locator = locator;
+    }
 
     public Task<ConversionRunResult> RunAsync(
         ConversionJobRequest request,
@@ -47,23 +54,23 @@ public sealed class CoreConversionRunner : IConversionRunner
         IProgress<ConversionProgress> progress,
         CancellationToken ct)
     {
-        var modelDir = settings.PiperModelDir;
-        var onnxPath = string.IsNullOrWhiteSpace(modelDir) || !Directory.Exists(modelDir)
-            ? null
-            : Directory.GetFiles(modelDir, "*.onnx").FirstOrDefault();
-        if (onnxPath is null)
+        var piper = _locator.Resolve(settings.PiperModelDir);
+        if (!piper.Status.IsValid)
         {
-            throw new InvalidOperationException("Falta la carpeta del modelo Piper (con un .onnx) en Ajustes.");
+            throw new InvalidOperationException($"Modelo Piper no válido en Ajustes: {piper.Status.Message}");
         }
 
-        var outDir = settings.OutputRoot;
-        Directory.CreateDirectory(outDir);
+        var modelDir = piper.EffectiveDir;
+        var onnxPath = Directory.GetFiles(modelDir, "*.onnx").First();
+
+        var layout = BookOutputLayout.For(settings.OutputRoot, request.Book.Title);
+        Directory.CreateDirectory(layout.WorkDir);
 
         var translate = !string.IsNullOrWhiteSpace(request.SourceLanguage);
         CachedChapterTranslator? translator = translate
             ? new CachedChapterTranslator(
                 new OllamaTranslator(_http, settings.OllamaUrl, settings.OllamaModel),
-                new FileSystemTranslationCache(Path.Combine(outDir, "translation-cache")))
+                new FileSystemTranslationCache(layout.TranslationCacheDir))
             : null;
 
         using var tts = new PiperSherpaTtsEngine(
@@ -77,13 +84,13 @@ public sealed class CoreConversionRunner : IConversionRunner
             new SpanishTextNormalizer(),
             new SentenceChunker(),
             tts,
-            new FileSystemChunkCache(Path.Combine(outDir, "cache")),
+            new FileSystemChunkCache(layout.CacheDir),
             new WavChapterAssembler(),
             translator);
 
         var chapterWavs = await pipeline.ConvertAsync(
             request.EpubPath,
-            outDir,
+            layout.WorkDir,
             Voice,
             request.Speed,
             progress: progress,
@@ -99,7 +106,7 @@ public sealed class CoreConversionRunner : IConversionRunner
         {
             return new ConversionRunResult(
                 null,
-                $"ffmpeg no encontrado: los WAV de capítulo están en {outDir}. Instálalo con 'winget install Gyan.FFmpeg' o indica su ruta en Ajustes.");
+                $"ffmpeg no encontrado: los WAV de capítulo están en {layout.WorkDir}. Instálalo con 'winget install Gyan.FFmpeg' o indica su ruta en Ajustes.");
         }
 
         var chapters = await AudiobookChapterResolver.ResolveAsync(
@@ -112,18 +119,22 @@ public sealed class CoreConversionRunner : IConversionRunner
 
         progress.Report(new ConversionProgress(0, 0, 0, 0, "Exporting"));
 
-        IAudiobookExporter exporter = request.Format == AudiobookFormat.M4b
+        // Opus exporter appends the sanitized title to its root; the m4b exporter writes into the book folder itself.
+        // Both sanitize the same book.Title, so both land in layout.BookDir.
+        var isM4b = request.Format == AudiobookFormat.M4b;
+        IAudiobookExporter exporter = isM4b
             ? new M4bExporter(ffmpeg)
             : new OpusFolderExporter(ffmpeg);
+        var exportRoot = isM4b ? layout.BookDir : settings.OutputRoot;
 
         try
         {
-            var outputPath = await exporter.ExportAsync(request.Book, chapters, outDir, ct);
+            var outputPath = await exporter.ExportAsync(request.Book, chapters, exportRoot, ct);
             return new ConversionRunResult(outputPath, null);
         }
         catch (FfmpegNotFoundException)
         {
-            return new ConversionRunResult(null, $"ffmpeg no es ejecutable en '{ffmpeg}'. Los WAV están en {outDir}.");
+            return new ConversionRunResult(null, $"ffmpeg no es ejecutable en '{ffmpeg}'. Los WAV están en {layout.WorkDir}.");
         }
     }
 }

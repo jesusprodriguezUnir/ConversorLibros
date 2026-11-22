@@ -27,11 +27,29 @@ export function NewConversionPage() {
   useEffect(() => {
     api
       .getSettings()
-      .then(setSettings)
-      .catch(() => {
-        // Non-blocking: backend validation will still catch missing settings on start.
+      .then((res) => {
+        setSettings(res);
+        setSpeed(res.settings.defaultSpeed);
+        setFormat(res.settings.defaultFormat);
+      })
+      .catch((err) => {
+        showToast(
+          err instanceof Error
+            ? `No se pudieron cargar los ajustes: ${err.message}`
+            : "No se pudieron cargar los ajustes.",
+          "error"
+        );
       });
-  }, []);
+  }, [showToast]);
+
+  // Mirrors the backend layout: final audio lives in <OutputRoot>/<folderName>/, work files in work/.
+  const outputPreview = (() => {
+    if (!settings || !book) return null;
+    const root = settings.settings.outputRoot.replace(/[\\/]+$/, "");
+    const sep = root.includes("\\") ? "\\" : "/";
+    const bookDir = `${root}${sep}${book.folderName}`;
+    return format === "m4b" ? `${bookDir}${sep}${book.folderName}.m4b` : `${bookDir}${sep}`;
+  })();
 
   const handleSelectFile = async (file: File) => {
     setInspecting(true);
@@ -162,6 +180,12 @@ export function NewConversionPage() {
             onSourceLanguageChange={setSourceLanguage}
             onFormatChange={setFormat}
           />
+
+          {outputPreview && (
+            <p className="text-xs text-[#93A0B8] break-all">
+              Salida: <span className="font-mono text-[#EDF0F7]">{outputPreview}</span>
+            </p>
+          )}
 
           <ProgressPanel
             state={state}

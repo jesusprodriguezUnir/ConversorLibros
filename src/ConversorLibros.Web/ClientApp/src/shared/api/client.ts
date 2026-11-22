@@ -41,6 +41,10 @@ export const api = {
     return parseJson<LibraryItemDto[]>(res);
   },
 
+  libraryDownloadUrl(id: string): string {
+    return `/api/library/${encodeURIComponent(id)}/download`;
+  },
+
   async openLibraryItem(id: string): Promise<void> {
     const res = await fetch(`/api/library/${encodeURIComponent(id)}/open`, {
       method: "POST",

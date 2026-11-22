@@ -20,11 +20,14 @@ public sealed class JsonSettingsStore
     };
 
     private readonly string _settingsFilePath;
+    private readonly PiperModelLocator? _locator;
     private readonly object _gate = new();
 
-    public JsonSettingsStore(string? settingsFilePath = null)
+    /// <param name="locator">Null disables Piper auto-detection (used by tests to stay hermetic).</param>
+    public JsonSettingsStore(string? settingsFilePath = null, PiperModelLocator? locator = null)
     {
         _settingsFilePath = settingsFilePath ?? GetDefaultSettingsFilePath();
+        _locator = locator;
     }
 
     public static string DefaultOutputRoot =>
@@ -59,7 +62,9 @@ public sealed class JsonSettingsStore
                     OutputRoot: string.IsNullOrWhiteSpace(parsed.OutputRoot) ? DefaultOutputRoot : parsed.OutputRoot,
                     OllamaUrl: string.IsNullOrWhiteSpace(parsed.OllamaUrl) ? DefaultOllamaUrl : parsed.OllamaUrl,
                     OllamaModel: string.IsNullOrWhiteSpace(parsed.OllamaModel) ? DefaultOllamaModel : parsed.OllamaModel,
-                    FfmpegOverride: parsed.FfmpegOverride ?? string.Empty);
+                    FfmpegOverride: parsed.FfmpegOverride ?? string.Empty,
+                    DefaultSpeed: NormalizeSpeed(parsed.DefaultSpeed),
+                    DefaultFormat: NormalizeFormat(parsed.DefaultFormat));
             }
             catch (Exception ex) when (ex is JsonException or IOException)
             {
@@ -75,7 +80,9 @@ public sealed class JsonSettingsStore
             OutputRoot: string.IsNullOrWhiteSpace(input.OutputRoot) ? DefaultOutputRoot : input.OutputRoot.Trim(),
             OllamaUrl: string.IsNullOrWhiteSpace(input.OllamaUrl) ? DefaultOllamaUrl : input.OllamaUrl.Trim(),
             OllamaModel: string.IsNullOrWhiteSpace(input.OllamaModel) ? DefaultOllamaModel : input.OllamaModel.Trim(),
-            FfmpegOverride: (input.FfmpegOverride ?? string.Empty).Trim());
+            FfmpegOverride: (input.FfmpegOverride ?? string.Empty).Trim(),
+            DefaultSpeed: NormalizeSpeed(input.DefaultSpeed),
+            DefaultFormat: NormalizeFormat(input.DefaultFormat));
 
         lock (_gate)
         {
@@ -99,11 +106,28 @@ public sealed class JsonSettingsStore
         return BuildResponse(settings);
     }
 
-    public SettingsResponse BuildResponse(WebSettings settings) =>
-        new(
+    public SettingsResponse BuildResponse(WebSettings settings)
+    {
+        var piper = _locator?.Resolve(settings.PiperModelDir)
+            ?? new PiperModelResolution(
+                settings.PiperModelDir,
+                IsAutoDetected: false,
+                ValidatePiper(settings.PiperModelDir));
+
+        return new SettingsResponse(
             settings,
-            ValidatePiper(settings.PiperModelDir),
-            ResolveFfmpeg(settings.FfmpegOverride));
+            piper.Status,
+            ResolveFfmpeg(settings.FfmpegOverride),
+            piper.EffectiveDir,
+            piper.IsAutoDetected);
+    }
+
+    /// <summary>Keeps the default speed in the range the conversion job accepts; missing or invalid values become 1.0.</summary>
+    public static float NormalizeSpeed(float speed) =>
+        float.IsNaN(speed) || speed <= 0f ? 1.0f : Math.Clamp(speed, 0.5f, 1.5f);
+
+    public static string NormalizeFormat(string? format) =>
+        string.Equals(format?.Trim(), "m4b", StringComparison.OrdinalIgnoreCase) ? "m4b" : "opus";
 
     /// <summary>
     /// Maps a subfolder of a Piper model (e.g. espeak-ng-data) back to the parent folder that holds the .onnx.
@@ -185,5 +209,7 @@ public sealed class JsonSettingsStore
             OutputRoot: DefaultOutputRoot,
             OllamaUrl: DefaultOllamaUrl,
             OllamaModel: DefaultOllamaModel,
-            FfmpegOverride: string.Empty);
+            FfmpegOverride: string.Empty,
+            DefaultSpeed: 1.0f,
+            DefaultFormat: "opus");
 }

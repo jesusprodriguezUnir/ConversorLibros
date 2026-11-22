@@ -15,6 +15,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 });
 
+builder.Services.AddSingleton(new PiperModelLocator(
+    AppContext.BaseDirectory,
+    builder.Environment.ContentRootPath,
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
 builder.Services.AddSingleton<JsonSettingsStore>();
 builder.Services.AddSingleton<UploadedBookStore>();
 builder.Services.AddSingleton<IConversionRunner, CoreConversionRunner>();

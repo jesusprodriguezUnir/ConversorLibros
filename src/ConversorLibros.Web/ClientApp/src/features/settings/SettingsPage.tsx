@@ -13,12 +13,15 @@ type BrowseTarget = "piper" | "output" | null;
 export function SettingsPage() {
   const { showToast } = useToast();
 
+  // Real defaults (Ollama URL/model, speed, format) come from GET /api/settings; this is only the pre-load shape.
   const [form, setForm] = useState<WebSettings>({
     piperModelDir: "",
     outputRoot: "",
-    ollamaUrl: "http://localhost:11434",
-    ollamaModel: "qwen3:8b",
+    ollamaUrl: "",
+    ollamaModel: "",
     ffmpegOverride: "",
+    defaultSpeed: 1.0,
+    defaultFormat: "opus",
   });
   const [status, setStatus] = useState<SettingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -137,6 +140,16 @@ export function SettingsPage() {
         </div>
 
         {status && (
+          <p className="text-xs text-sky-300">
+            {status.piperAutoDetected
+              ? `Detectado automáticamente: ${status.effectivePiperModelDir}`
+              : status.effectivePiperModelDir
+                ? `Configurado manualmente: ${status.effectivePiperModelDir}`
+                : "Sin modelo configurado."}
+          </p>
+        )}
+
+        {status && (
           <p className={`text-xs ${status.piper.isValid ? "text-emerald-300" : "text-amber-300"}`}>
             {status.piper.message}
           </p>
@@ -204,6 +217,39 @@ export function SettingsPage() {
                 {status.ffmpeg.message}
               </p>
             )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-[#93A0B8] mb-1.5">Velocidad por defecto</label>
+              <input
+                type="number"
+                min={0.5}
+                max={1.5}
+                step={0.05}
+                value={form.defaultSpeed}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, defaultSpeed: Number(e.target.value) }))
+                }
+                aria-label="Velocidad por defecto"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D12] border border-[#252C3D] focus:border-[#F59E0B] focus:outline-none font-mono text-xs text-[#EDF0F7]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#93A0B8] mb-1.5">Formato por defecto</label>
+              <select
+                value={form.defaultFormat}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, defaultFormat: e.target.value as WebSettings["defaultFormat"] }))
+                }
+                aria-label="Formato por defecto"
+                className="w-full px-3.5 py-2 rounded-xl bg-[#0B0D12] border border-[#252C3D] focus:border-[#F59E0B] focus:outline-none font-mono text-xs text-[#EDF0F7]"
+              >
+                <option value="opus">Opus (carpeta)</option>
+                <option value="m4b">M4B (archivo único)</option>
+              </select>
+            </div>
           </div>
         </div>
       </Card>

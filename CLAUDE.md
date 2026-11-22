@@ -11,6 +11,7 @@ Offline EPUB (DRM-free) → audiobook converter, Spanish (`es-ES`) TTS. Personal
 ```bash
 dotnet build ConversorLibros.sln
 dotnet test tests/ConversorLibros.Core.Tests
+dotnet test tests/ConversorLibros.Web.Tests
 dotnet test tests/ConversorLibros.Core.Tests --filter "FullyQualifiedName~SpanishTextNormalizerTests"
 
 # CLI (Windows x64: references the sherpa-onnx win-x64 native runtime)
@@ -51,7 +52,7 @@ dotnet build src/ConversorLibros.App -f net10.0-windows10.0.19041.0
 
 ## Architecture
 
-Three-layer split: `ConversorLibros.Core` (net10.0, platform-agnostic) is reused by two Windows hosts — `ConversorLibros.Cli` (console) and `ConversorLibros.App` (.NET MAUI, `net10.0-windows10.0.19041.0`, MVVM with CommunityToolkit.Mvvm).
+Three-layer split: `ConversorLibros.Core` (net10.0, platform-agnostic) is reused by three hosts — `ConversorLibros.Cli` (console), `ConversorLibros.App` (.NET MAUI, `net10.0-windows10.0.19041.0`, MVVM with CommunityToolkit.Mvvm) and `ConversorLibros.Web` (ASP.NET Core, see [Web host](#web-host)).
 
 **Pipeline** (`Core/Abstractions/PipelineInterfaces.cs`, orchestrated by `Core/Services/BookConversionPipeline.cs`):
 
@@ -65,8 +66,16 @@ Key invariants:
 - Chapter assembly streams to disk with `FileStream`; do not buffer whole chapters in memory.
 - Everything is `async` with `CancellationToken` and `IProgress<ConversionProgress>`.
 - Process calls (ffmpeg) use `ProcessStartInfo.ArgumentList`, never a concatenated argument string.
-- CLI composes the pipeline manually in `Cli/Program.cs`. The App registers its services in `App/MauiProgram.cs` via `builder.Services`; pipeline wiring lives in `App/Services/ConversionService.cs`. Changing a Core service constructor means updating both call sites.
+- CLI composes the pipeline manually in `Cli/Program.cs`. The App registers its services in `App/MauiProgram.cs` via `builder.Services`; pipeline wiring lives in `App/Services/ConversionService.cs`. `ConversionRunner` in `Web/Services` is the third pipeline composition root. Changing a Core service constructor means updating all three call sites: `Cli/Program.cs`, `App/Services/ConversionService.cs` and `Web/Services/ConversionRunner.cs`.
 - The App's Piper synthesis is synchronous, so `ConversionService` runs the whole pipeline inside `Task.Run`.
 - The App reads its paths and Ollama settings from `AppSettings` (MAUI `Preferences`); the folder picker is the WinRT `FolderPicker` in `App/Platforms/Windows`.
 
-Tests are xUnit in `tests/ConversorLibros.Core.Tests`, covering Core only. The plan requires the normalizer to stay fully covered by unit tests.
+## Web host
+
+`ConversorLibros.Web` is an ASP.NET Core host (default `http://localhost:5180`) that serves the React/Vite UI from `ClientApp` (built into `wwwroot`) and reuses Core through `ConversionRunner`. Progress is streamed over SSE at `/api/conversions/events`.
+
+- **Per-book layout:** `<OutputRoot>/<SanitizeComponent(title)>/`. The final `.opus` files and cover, or the `.m4b`, sit directly in the book folder. Intermediate files live in `work/` (chapter WAVs, `cache/`, `translation-cache/`). `LibraryScanner` lists this layout and the legacy top-level ones, and ignores `work/`.
+- **Model auto-detection:** `PiperModelLocator.Resolve` uses the configured `piperModelDir` when valid; otherwise it probes `models/` folders near the executable and content root, then `%LOCALAPPDATA%\ConversorLibros\models`. The result is exposed as `effectivePiperModelDir` / `piperAutoDetected` in `SettingsResponse` and is never written to `settings.json`.
+- **Download:** `GET /api/library/{id}/download` streams an `.m4b` file, or zips the `.opus` files and cover of an opus book. The path is checked for containment under `OutputRoot`.
+
+Tests are xUnit in `tests/ConversorLibros.Core.Tests` (Core) and `tests/ConversorLibros.Web.Tests` (Web host). Frontend tests use Vitest (`npx vitest run <path>`). The plan requires the normalizer to stay fully covered by unit tests.

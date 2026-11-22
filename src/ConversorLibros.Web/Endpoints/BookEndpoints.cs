@@ -1,3 +1,4 @@
+using ConversorLibros.Core.Services;
 using ConversorLibros.Web.Models;
 using ConversorLibros.Web.Services;
 
@@ -44,7 +45,8 @@ public static class BookEndpoints
                     CoverUrl: hasCover ? $"/api/books/{entry.UploadId}/cover" : null,
                     Chapters: book.Chapters
                         .Select(c => new ChapterSummaryDto(c.Index, c.Title, c.RawText.Length))
-                        .ToList());
+                        .ToList(),
+                    FolderName: AudiobookFileNames.SanitizeComponent(book.Title));
 
                 return Results.Ok(dto);
             }

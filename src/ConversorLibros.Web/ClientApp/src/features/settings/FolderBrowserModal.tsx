@@ -30,14 +30,16 @@ export function FolderBrowserModal({
     try {
       const res = await api.browseFileSystem(path);
       setData(res);
-    } catch {
-      // Fall back to drive list if initial path doesn't exist yet.
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo explorar el equipo.";
+      // Fall back to the drive list when the requested path can't be opened, and say so.
       if (path) {
         try {
           const drives = await api.browseFileSystem();
           setData(drives);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "No se pudo explorar el equipo.");
+          setError(`${message} Se muestran las unidades del equipo.`);
+        } catch (driveErr) {
+          setError(driveErr instanceof Error ? driveErr.message : "No se pudo explorar el equipo.");
         }
       } else {
         setError("No se pudo explorar el equipo.");

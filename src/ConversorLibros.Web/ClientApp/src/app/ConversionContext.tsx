@@ -8,6 +8,7 @@ import {
 } from "react";
 import { api } from "../shared/api/client";
 import type { ConversionStateDto, StartConversionRequest } from "../shared/api/types";
+import { useToast } from "../shared/components/Toast";
 
 const initialState: ConversionStateDto = {
   status: "idle",
@@ -34,26 +35,31 @@ const ConversionContext = createContext<ConversionContextValue | null>(null);
 
 export function ConversionProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ConversionStateDto>(initialState);
+  const { showToast } = useToast();
 
   const refreshState = useCallback(async () => {
     try {
       const current = await api.getCurrentConversion();
       setState(current);
-    } catch {
-      // Ignore transient startup errors; SSE will resync once backend is reachable.
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "No se pudo obtener el estado de la conversión.",
+        "error"
+      );
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     void refreshState();
 
+    // EventSource reconnects on its own, so transport errors stay quiet; only bad payloads are surfaced.
     const source = new EventSource("/api/conversions/events");
     const handleEvent = (event: MessageEvent) => {
       try {
         const next = JSON.parse(event.data) as ConversionStateDto;
         setState(next);
       } catch {
-        // Ignore malformed payloads.
+        showToast("Se recibió un evento de conversión no válido.", "error");
       }
     };
 
@@ -64,7 +70,7 @@ export function ConversionProvider({ children }: { children: ReactNode }) {
     return () => {
       source.close();
     };
-  }, [refreshState]);
+  }, [refreshState, showToast]);
 
   const startConversion = useCallback(async (request: StartConversionRequest) => {
     const next = await api.startConversion(request);

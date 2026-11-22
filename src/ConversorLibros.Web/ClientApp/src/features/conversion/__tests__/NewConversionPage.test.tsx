@@ -32,15 +32,20 @@ const validSettings: SettingsResponse = {
     ollamaUrl: "http://localhost:11434",
     ollamaModel: "qwen3:8b",
     ffmpegOverride: "",
+    defaultSpeed: 1.0,
+    defaultFormat: "opus",
   },
   piper: { isValid: true, message: "Modelo Piper listo para sintetizar." },
   ffmpeg: { found: true, resolvedPath: "ffmpeg.exe", message: "Usando: ffmpeg.exe" },
+  effectivePiperModelDir: "C:\\models\\piper",
+  piperAutoDetected: false,
 };
 
 const inspectedBook: InspectedBookDto = {
   uploadId: "up-123",
   title: "Fundación",
   author: "Isaac Asimov",
+  folderName: "Fundación",
   language: "en",
   hasCover: true,
   coverUrl: "/api/books/up-123/cover",
@@ -153,6 +158,35 @@ describe("NewConversionPage", () => {
     await user.click(screen.getByRole("button", { name: "Todos" }));
     expect(screen.getByText("2 de 2 seleccionados")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /empezar/i })).toBeEnabled();
+  });
+
+  it("prefills speed and format from settings and previews the per-book output path", async () => {
+    const user = userEvent.setup();
+    const m4bSettings: SettingsResponse = {
+      ...validSettings,
+      settings: { ...validSettings.settings, defaultSpeed: 1.15, defaultFormat: "m4b" },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation((url: string) => {
+        if (url === "/api/settings") {
+          return Promise.resolve({ ok: true, json: async () => m4bSettings });
+        }
+        if (url === "/api/books/inspect") {
+          return Promise.resolve({ ok: true, json: async () => inspectedBook });
+        }
+        return Promise.resolve({ ok: true, json: async () => idleConversion });
+      })
+    );
+
+    renderPage();
+
+    const input = screen.getByLabelText(/seleccionar archivo epub/i) as HTMLInputElement;
+    await user.upload(input, new File(["epub"], "fundacion.epub", { type: "application/epub+zip" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("C:\\out\\Fundación\\Fundación.m4b")).toBeInTheDocument();
+    });
   });
 
   it("submits selected chapters, speed, translation and format to startConversion", async () => {

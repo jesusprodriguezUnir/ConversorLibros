@@ -4,6 +4,8 @@ export interface WebSettings {
   ollamaUrl: string;
   ollamaModel: string;
   ffmpegOverride: string;
+  defaultSpeed: number;
+  defaultFormat: "opus" | "m4b";
 }
 
 export interface PiperValidationStatus {
@@ -21,6 +23,8 @@ export interface SettingsResponse {
   settings: WebSettings;
   piper: PiperValidationStatus;
   ffmpeg: FfmpegStatus;
+  effectivePiperModelDir: string;
+  piperAutoDetected: boolean;
 }
 
 export interface TestOllamaResponse {
@@ -66,6 +70,7 @@ export interface InspectedBookDto {
   hasCover: boolean;
   coverUrl: string | null;
   chapters: ChapterSummaryDto[];
+  folderName: string;
 }
 
 export interface StartConversionRequest {

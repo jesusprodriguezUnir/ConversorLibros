@@ -98,6 +98,31 @@ describe("LibraryPage", () => {
     expect(screen.queryByText("El Quijote")).not.toBeInTheDocument();
   });
 
+  it("links each card to its download endpoint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => sampleBooks,
+      })
+    );
+
+    render(
+      <MemoryRouter>
+        <ToastProvider>
+          <LibraryPage />
+        </ToastProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.getByText("Dune")).toBeInTheDocument());
+
+    const links = screen.getAllByRole("link", { name: /descargar/i });
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute("href", "/api/library/book-1/download");
+    expect(links[1]).toHaveAttribute("href", "/api/library/book-2/download");
+  });
+
   it("calls POST /api/library/{id}/open when clicking Abrir carpeta", async () => {
     const user = userEvent.setup();
     const fetchMock = vi
