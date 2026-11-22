@@ -4,14 +4,7 @@ import { ConversionProvider } from "./ConversionContext";
 import { AppShell } from "./AppShell";
 import { LibraryPage } from "../features/library/LibraryPage";
 import { NewConversionPage } from "../features/conversion/NewConversionPage";
-
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-    </div>
-  );
-}
+import { SettingsPage } from "../features/settings/SettingsPage";
 
 export function App() {
   return (
@@ -23,7 +16,7 @@ export function App() {
               <Route path="/" element={<Navigate to="/biblioteca" replace />} />
               <Route path="/biblioteca" element={<LibraryPage />} />
               <Route path="/convertir" element={<NewConversionPage />} />
-              <Route path="/ajustes" element={<PlaceholderPage title="Ajustes" />} />
+              <Route path="/ajustes" element={<SettingsPage />} />
               <Route path="*" element={<Navigate to="/biblioteca" replace />} />
             </Route>
           </Routes>
