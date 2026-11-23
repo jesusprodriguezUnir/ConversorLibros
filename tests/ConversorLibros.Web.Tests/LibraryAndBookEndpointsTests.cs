@@ -48,6 +48,31 @@ public sealed class LibraryAndBookEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLibrary_HasReaderOnlyForOpusWithReaderIndex()
+    {
+        var withReader = Path.Combine(_outputRoot, "A con lector");
+        var withoutReader = Path.Combine(_outputRoot, "B sin lector");
+        var m4bDir = Path.Combine(_outputRoot, "C m4b");
+        Directory.CreateDirectory(Path.Combine(withReader, "reader"));
+        Directory.CreateDirectory(Path.Combine(m4bDir, "reader"));
+        Directory.CreateDirectory(withoutReader);
+        File.WriteAllBytes(Path.Combine(withReader, "001 - Uno.opus"), [1]);
+        File.WriteAllBytes(Path.Combine(withoutReader, "001 - Uno.opus"), [1]);
+        File.WriteAllBytes(Path.Combine(m4bDir, "C m4b.m4b"), [1]);
+        File.WriteAllText(Path.Combine(withReader, "reader", "index.json"), "{}");
+        File.WriteAllText(Path.Combine(m4bDir, "reader", "index.json"), "{}");
+
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var items = await client.GetFromJsonAsync<List<LibraryItemDto>>("/api/library");
+
+        Assert.NotNull(items);
+        Assert.Equal(
+            [true, false, false],
+            items.OrderBy(i => i.Title, StringComparer.Ordinal).Select(i => i.HasReader).ToArray());
+    }
+
+    [Fact]
     public async Task GetLibrary_ScansM4bAndServesStableIds()
     {
         Directory.CreateDirectory(_outputRoot);

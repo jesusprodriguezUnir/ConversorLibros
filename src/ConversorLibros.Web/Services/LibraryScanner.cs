@@ -53,14 +53,37 @@ public static class LibraryScanner
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    /// <summary>True when <paramref name="candidate"/> is strictly below <paramref name="root"/> once both are fully resolved.</summary>
+    /// <summary>
+    /// True when <paramref name="candidate"/> is strictly below <paramref name="root"/> once both are fully resolved,
+    /// and no existing component below <paramref name="root"/> is a junction or symlink (which could point anywhere).
+    /// </summary>
     public static bool IsInside(string root, string candidate)
     {
         var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                        + Path.DirectorySeparatorChar;
         var fullCandidate = Path.GetFullPath(candidate);
-        return fullCandidate.Length > fullRoot.Length
-               && fullCandidate.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
+        if (fullCandidate.Length <= fullRoot.Length
+            || !fullCandidate.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var current = fullRoot;
+        foreach (var segment in fullCandidate[fullRoot.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            if (!Path.Exists(current))
+            {
+                break;
+            }
+
+            if (File.GetAttributes(current).HasFlag(FileAttributes.ReparsePoint))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static string? FindCover(string folder) =>

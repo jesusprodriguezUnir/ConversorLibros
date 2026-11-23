@@ -92,3 +92,59 @@ SUGGESTION:
 2. Segmenter merge heuristic could be documented as a known limit for lowercase-leading dialogue.
 
 ### F1 verdict: PASS WITH WARNINGS
+
+
+---
+
+## F2 verification (reader API, tasks 2.1-2.6)
+
+Mode: Strict TDD. Tasks 2.1-2.6 all `[x]`. Scope: reader-api spec only.
+
+### Runtime evidence
+`dotnet test tests/ConversorLibros.Web.Tests --filter "ReaderEndpointsTests|LibraryAndBookEndpointsTests|LibraryScanner|ReaderSidecarWriterTests|ConversionRunnerReaderDataTests|ConversionEndpoints" -p:BaseOutputPath=<scratch>` -> exit 0, 68 passed, 0 failed, 0 skipped. Build warnings only NU1902 (pre-existing AngleSharp). Apply-progress reports 78 with the broader `Reader|Library|ConversionEndpoints` filter; the difference is the filter, not a regression.
+
+### Spec compliance (reader-api: 5 requirements, 19 scenarios)
+| Scenario | Test | Status |
+|---|---|---|
+| Book with reader data | Index_BookWithReaderData_ReturnsAvailableWithChapters | COVERED |
+| Book without reader data | Index_BookWithoutReaderData_ReturnsUnavailableWithReason | COVERED |
+| Missing chapter | Chapter_NotInIndex_ReturnsNotFound | COVERED |
+| Corrupt JSON | Chapter_CorruptJson_IsControlledErrorAndOthersStayReadable; Index_CorruptIndex_ReportsUnavailable | COVERED |
+| Unknown book / invalid id | UnknownOrEncodedBookId_ReturnsNotFound (6 paths), NegativeOrNonInteger..., DeleteBookmark_NonGuidId | COVERED (only `..%2F`; no `%5C`/drive-letter case, but id never reaches the filesystem, it is only compared by hash) |
+| Full request | Audio_FullRequest_ReturnsOggWithAcceptRanges | COVERED |
+| Range request | Audio_RangeRequest_Returns206WithExactBytes | COVERED |
+| Unsatisfiable Range | Audio_RangeBeyondLength_Returns416 | COVERED |
+| Path containment (symlink/junction) | none | UNTESTED |
+| M4B or missing audio | Audio_M4bBook_ReturnsNotFound; Audio_MissingChapterFile_ReturnsNotFound | COVERED |
+| First save and read | Progress_PutThenGet_RoundTrips (+ NoneStored 204) | COVERED |
+| Invalid payload | Progress_InvalidPayload_Returns400AndKeepsStoredValue | COVERED |
+| Concurrent writes | Progress_ConcurrentPuts_LeaveValidJsonWithOneOfTheValues | COVERED |
+| Create and list | Bookmarks_CreateThenList_Returns201AndListsIt | COVERED |
+| Delete unknown id | Bookmarks_UnknownId_DeleteAndUpdateReturn404 | COVERED |
+| Note too long | Bookmarks_NoteOver500_Returns400 | COVERED |
+Plus task 2.4: GetLibrary_HasReaderOnlyForOpusWithReaderIndex (passes).
+
+### Deviations judged
+- 200 `available:false` instead of design's 404: ACCEPTABLE, spec is explicit (spec wins over design).
+- 422 for corrupt chapter: ACCEPTABLE (spec allows 500 problem details or 422).
+- Excerpt cap 160, extra field: ACCEPTABLE, design sidecar shape lists `excerpt <=160`.
+- Unknown schemaVersion reads empty / writes 409, never overwrites: ACCEPTABLE, matches design.md:54.
+- 400 before 409: ACCEPTABLE. Shared semaphore for reads and writes: ACCEPTABLE.
+
+### Invariants
+LibraryIds.Compute is a verbatim move of the removed ComputeId; resolver hashes the same `EnumerateDirectories` paths that Core's `AudiobookLibrary.Scan` stores in `Path`. Core/Cli/App untouched (git status), no new packages, DI is AddSingleton like neighbours.
+
+### Issues
+CRITICAL: none.
+WARNING:
+1. ReaderEndpoints.cs:68 / LibraryBookResolver.cs:26 - `LibraryScanner.IsInside` is lexical (`Path.GetFullPath`); it does not resolve junctions/symlinks. A `.opus` symlink or a book folder junction pointing outside OutputRoot is served, contradicting the spec scenario "Path containment (after symlink/.. normalization)". No test covers it. Fix: resolve `FileInfo.ResolveLinkTarget(true)` (or reject entries with ReparsePoint attribute) and add a junction test.
+2. ReaderStore.cs:22,205 - `_locks` grows by one SemaphoreSlim per book dir and is never pruned. Bounded by library size; negligible in practice.
+SUGGESTION:
+1. LibraryBookResolver.cs:19 - every audio Range request enumerates and hashes all book folders (O(books)); cache id->path with invalidation if libraries grow large.
+2. ReaderStore.cs:86,114 - a bookmarks.json with a `null` list entry passes deserialization and NREs in `b.Id` -> 500 (not leaked detail, but uncontrolled). Filter nulls on load.
+3. No test for excerpt truncation (160), blank note -> null, or `%5C`/absolute-path ids; unit-cover Truncate/NullIfBlank.
+4. tasks.md 2.5 says LibraryIds is extracted "from LibraryScanner"; it came from LibraryEndpoints (doc drift).
+
+Security notes: route constraint `:int:min(0)` rejects negative/non-int/overflow (404); leading zeros parse as ints; bookmark ids are `:guid`; ids are never used as paths. Range multi/suffix handled by ASP.NET RangeHelper. Error bodies are fixed Spanish messages, no exception text. Atomic write: `.partial` FileMode.Create + File.Move overwrite; leftover .partial is overwritten by the next write; readers use FileShare.ReadWrite|Delete.
+
+### F2 verdict: PASS WITH WARNINGS

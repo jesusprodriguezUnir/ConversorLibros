@@ -56,12 +56,12 @@ Constraints for all slices: no Core constructor changes (only the optional trail
 
 ## F2: Reader API (spec: reader-api)
 
-- [ ] 2.1 RED: `ReaderEndpointsTests` (WebApplicationFactory) for index/chapter 200, no-data 404, missing chapter 404, corrupt JSON handled, unknown or encoded id (`..%2F`) 404, negative or non-int `n` 404, non-guid bookmark id 404. Scenarios: Book with reader data; Book without reader data; Missing chapter; Corrupt JSON; Unknown book or invalid id; Path containment.
-- [ ] 2.2 RED: audio tests: full 200, Range 206, unsatisfiable 416, M4B/missing 404. Scenarios: Full request; Range request; Unsatisfiable Range; M4B or missing audio.
-- [ ] 2.3 RED: progress and bookmark tests: GET empty → 204; PUT roundtrip; invalid payload/unknown chapter/ms<0 → 400; malformed file → empty, next write replaces; concurrent PUTs stay valid JSON; bookmark create 201, list, delete unknown 404, note >500 → 400; unknown schemaVersion → 409. Scenarios: First save and read; Invalid payload; Concurrent writes; Create and list; Delete unknown id; Note too long.
-- [ ] 2.4 RED: `LibraryEndpointsTests`: `hasReader` true only for Opus with `reader/index.json`.
-- [ ] 2.5 GREEN: create `Web/Services/LibraryIds.cs` (extract from `LibraryScanner`, same ids), `LibraryBookResolver.cs`, `ReaderStore.cs` (per-book `SemaphoreSlim`).
-- [ ] 2.6 GREEN: `Web/Endpoints/ReaderEndpoints.cs` (every file passes `LibraryScanner.IsInside`); register in `Program.cs`; add `HasReader` to `LibraryItemDto` in `Web/Models/ApiDtos.cs` and `LibraryEndpoints.cs`.
+- [x] 2.1 RED: `ReaderEndpointsTests` (WebApplicationFactory) for index/chapter 200, no-data 404, missing chapter 404, corrupt JSON handled, unknown or encoded id (`..%2F`) 404, negative or non-int `n` 404, non-guid bookmark id 404. Scenarios: Book with reader data; Book without reader data; Missing chapter; Corrupt JSON; Unknown book or invalid id; Path containment.
+- [x] 2.2 RED: audio tests: full 200, Range 206, unsatisfiable 416, M4B/missing 404. Scenarios: Full request; Range request; Unsatisfiable Range; M4B or missing audio.
+- [x] 2.3 RED: progress and bookmark tests: GET empty → 204; PUT roundtrip; invalid payload/unknown chapter/ms<0 → 400; malformed file → empty, next write replaces; concurrent PUTs stay valid JSON; bookmark create 201, list, delete unknown 404, note >500 → 400; unknown schemaVersion → 409. Scenarios: First save and read; Invalid payload; Concurrent writes; Create and list; Delete unknown id; Note too long.
+- [x] 2.4 RED: `LibraryEndpointsTests`: `hasReader` true only for Opus with `reader/index.json`.
+- [x] 2.5 GREEN: create `Web/Services/LibraryIds.cs` (extract from `LibraryScanner`, same ids), `LibraryBookResolver.cs`, `ReaderStore.cs` (per-book `SemaphoreSlim`).
+- [x] 2.6 GREEN: `Web/Endpoints/ReaderEndpoints.cs` (every file passes `LibraryScanner.IsInside`); register in `Program.cs`; add `HasReader` to `LibraryItemDto` in `Web/Models/ApiDtos.cs` and `LibraryEndpoints.cs`.
 
 ## F3a: Static view + TOC (spec: reader-ui)
 
