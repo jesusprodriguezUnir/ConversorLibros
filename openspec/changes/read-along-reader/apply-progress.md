@@ -218,3 +218,23 @@ Scoped run (reader, library, app): 97/97; `tsc --noEmit` clean; `npm run build` 
 
 ### Not done
 - Focus is not managed when a page button becomes disabled at a bound (only the font buttons were requested).
+
+## F4a: Resume position (tasks 4.1, 4.2)
+
+Mode: Strict TDD. Bookmarks (4.3-4.5) are F4b.
+
+- `api.getReaderProgress` (204 -> null) and `api.saveReaderProgress` (optional `keepalive`) plus `ReaderProgressDto` / `SaveReaderProgressRequest` types.
+- `useReaderProgress`: `loadResume(chapters)` resolves the chapter to open (missing/failed/no saved -> first chapter, 0 ms) and arms a pending seek; once the chapter is ready the seek runs clamped to the chapter duration and the audio stays paused. Saves chapter + ms (no page numbers) on `pause`, on chapter change (at 0 ms), every 10 s while playing, and on `visibilitychange` hidden / `pagehide` with `keepalive`. Saves are skipped until the resume seek is applied, identical positions are not re-sent, and failures are swallowed (key cleared so the next trigger retries).
+- `ReaderPage`: index effect awaits `loadResume` before `setCurrent`; hook declared after `useAudioSync` so its seek effect runs after the audio source is set.
+
+### TDD evidence
+RED first: `useReaderProgress.test.tsx` failed on the missing module; `ReaderPageResume.test.tsx` 2 of 3 failed (the "nothing saved" test passed immediately, it is current behavior). GREEN: reader, library, app 115/115; `tsc --noEmit` clean; `npm run build` OK.
+
+## F4a verify follow-up
+
+- Pending resume ms is stored as `{ chapter, ms }`, applied only for its chapter and dropped when another chapter opens, so saves are no longer suppressed afterwards.
+- Pause, interval, hide and unmount saves are gated on the current chapter being ready; the explicit chapter-change save at 0 ms is kept.
+- The reader saves synchronously on unmount (keepalive) because SPA navigation fires neither `visibilitychange` nor `pagehide`.
+- The resume seek is re-applied once on `loadedmetadata` if the browser dropped it.
+- ReaderPage re-pages to the resumed entry while layout settles (and `useReanchor` follows it) so the page holding the saved sentence is shown while paused.
+- Tests added in `useReaderProgress.test.tsx` and `ReaderPageResume.test.tsx`. `ReaderPage.test.tsx` "loads the index ... cover" is intermittently flaky (also on the pre-change tree).

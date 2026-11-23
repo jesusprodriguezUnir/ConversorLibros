@@ -315,3 +315,30 @@ Findings
 No regressions of F3a/F3b/F3c observed (full reader suite green).
 
 ### F3d verdict: PASS
+
+
+## F4a - resume position (tasks 4.1, 4.2) - branch feat/read-along-reader-f4a, uncommitted
+
+Runs (ClientApp): `vitest run src/features/reader src/features/library src/app` - 13 files, 115 tests passed. `tsc --noEmit -p .` - clean (exit 0).
+
+Contract check: client DTOs match the server (GET 204 -> null, 200 -> {chapterIndex, ms, updatedAt}; PUT body {chapterIndex, ms}; server rejects ms < 0 or unknown chapter with 4xx, client never sends either: ms is Math.round(currentTime*1000) >= 0, chapter comes from the index). Keepalive body is ~30 bytes, far below the 64 KB limit.
+
+Mechanics verified
+- Effect order: useAudioSync (src effect, sets audio.src) is declared before useReaderProgress in ReaderPage.tsx:68-94, so in the commit where `ready` flips the src effect runs first and the resume seek (useReaderProgress.ts:62-67) runs after it; the seek is not wiped. Test "reopens at the saved chapter and ms" asserts currentTime 1.5 with the real hook order.
+- Listener/interval cleanup: pause, visibilitychange, pagehide and the 10 s interval are all removed in effect cleanups; `saveNow` is stable (deps audio, id) so no duplicate listeners across re-renders; `currentRef` avoids stale chapter closures.
+- Guard cannot get stuck on failed GET (falls back to first chapter, pending null) or missing saved chapter (first chapter, 0 ms). Late loadResume vs user pick is impossible: the TOC renders only after setIndexState, which happens after loadResume; `cancelled` is rechecked after the await.
+- Chapter change: initial null -> start does not save; later changes save {chapter, 0} (useReaderProgress.ts:68-73).
+
+Findings
+- CRITICAL: none.
+- WARNING: useReaderProgress.ts:62-67 / :40 - the pending resume ms is not tied to the resume chapter. If the resumed chapter fails to load (chapterState "error") or the user picks another chapter while it is still loading, `ready` becomes true for the other chapter and the saved ms is applied there (seek to the wrong chapter's offset, clamped by its duration). While the chapter is in error, pending stays non-null and all saves except the chapter-change one are suppressed. Fix: store {chapter, ms} and clear pending when `current` differs from it. No test covers this.
+- WARNING: useReaderProgress.ts:46-52 - `saveNow` is gated on pending but not on `ready`. After a chapter change, `current` is the new chapter while audio still holds the previous chapter's position (useAudioSync.ts:~70 returns early when src is null and does not pause or reset). A pause/interval/visibility save in that window writes {newChapter, previousChapter's ms}. Window is the chapter fetch (short; also after `ended` auto-advance). Fix: also require `ready`.
+- WARNING: spec "on leaving the reader" is not implemented. There is no unmount/route-leave save; the hook only saves on pause, 10 s, chapter change, hidden/pagehide. useAudioSync's cleanup pauses the audio on unmount but the async `pause` event arrives after the progress listener is removed, so up to 10 s of progress is lost when navigating back to the library with audio playing. SPA navigation fires neither visibilitychange nor pagehide.
+- WARNING: spec "the page containing that entry is shown" has no test. Resume relies on seekTo -> tick() (useAudioSync.ts seekTo) paging only when the entry is active and following; tick uses contentRef/entries at effect time and `followingRef`. ReaderPageResume asserts text, currentTime and src but not the visible page or the active entry.
+- SUGGESTION: Real-browser risk (MEDIUM-LOW, accepted): currentTime is assigned right after audio.src, before metadata. Per the HTML spec this sets the default playback start position and is applied after load in Chrome/Firefox/Safari; Safari historically needs `loadedmetadata`. Consider re-applying on `loadedmetadata` if the diff to the target exceeds a tolerance. jsdom cannot prove this.
+- SUGGESTION: Not covered by tests: unmount cleanup of listeners/interval, failed PUT retry across triggers is covered only indirectly ("keeps working when saving fails"), error-state resume chapter, "start of next chapter" alternative (spec allows clamp, so fine).
+- SUGGESTION: useReaderProgress.ts:75 / client.ts - a rejected keepalive fetch on hide is swallowed and retried at the next trigger; fine, but there is no sendBeacon fallback.
+
+No regressions of F3a-F3d observed (reader/library/app suites green).
+
+### F4a verdict: PASS WITH WARNINGS
