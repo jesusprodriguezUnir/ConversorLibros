@@ -148,3 +148,51 @@ SUGGESTION:
 Security notes: route constraint `:int:min(0)` rejects negative/non-int/overflow (404); leading zeros parse as ints; bookmark ids are `:guid`; ids are never used as paths. Range multi/suffix handled by ASP.NET RangeHelper. Error bodies are fixed Spanish messages, no exception text. Atomic write: `.partial` FileMode.Create + File.Move overwrite; leftover .partial is overwritten by the next write; readers use FileShare.ReadWrite|Delete.
 
 ### F2 verdict: PASS WITH WARNINGS
+
+## F3a verification (static view + TOC, tasks 3a.1-3a.5) - branch feat/read-along-reader-f3a, uncommitted
+
+Mode: Strict TDD. Tasks 3a.1-3a.5 all `[x]`. Scope: reader-ui F3a scenarios only (audio sync, appearance, resize-keeps-position, resume and bookmarks belong to F3b/F3c/F4).
+
+### Runtime evidence (from src/ConversorLibros.Web/ClientApp)
+- `npx vitest run src/features/reader src/features/library src/app` -> 6 files, 27 tests passed, 0 failed (React act() warnings on stderr only).
+- `npx tsc --noEmit -p .` -> exit clean, no output.
+- `npm run build` -> OK (1670 modules, built in 13.6s). `git status` afterwards: unchanged; wwwroot is git-ignored, no tracked file dirtied.
+
+### Spec compliance (8 F3a scenarios)
+| Scenario | Test | Status |
+|---|---|---|
+| Open chapter from TOC | ReaderPage "opens a chapter from the TOC at page 1..." (asserts chapter 3 text, page 1 de 3, translateX(0) after being on page 2). Audio part is F3b | COVERED |
+| Chapter without data | same test: "Capítulo 2" button disabled | COVERED |
+| Bounds | "clamps page navigation at the chapter bounds" (prev at page 1, next x3 stays at 3 de 3). Last page of the LAST chapter is not distinguished, but next-chapter is disabled there by `nextChapter === undefined` | COVERED (page level) |
+| Missing cover | "omits the cover page when the book has no cover" (no img) | COVERED |
+| Direct URL without data | it.each no-data + 404: hint text and link href=/biblioteca | COVERED |
+| Spread threshold | pagination.test.ts pagesPerView 1100 -> 2, 1099 -> 1; columnMetrics 1101/2. No component-level test of two-page rendering (F3c owns spread styling) | COVERED (unit) |
+| Reader available | BookCard.test "enables Leer and links to the reader" (href /biblioteca/b1/leer) | COVERED |
+| Reader unavailable | BookCard.test it.each hasReader=false and M4B: disabled button + hint, no link | COVERED |
+Plus: chapter 422 shows role=alert and the TOC stays usable; cover first-page test asserts alt text. 8/8 covered.
+
+### Tasks vs implementation / design
+3a.1-3a.5 match the code: pagination.ts, entries.ts, ReaderPage, PaginatedChapter, CoverPage, ReaderToc, PageIndicator, usePagination, reader.css, types/client, route `/biblioteca/:id/leer`, BookCard "Leer". No new dependencies (package.json untouched). Cover is the first column of chapter content with `break-after: column` (reader.css:62) and only for the first indexed chapter.
+
+### API contract check
+- Index DTO (available, reason, title, hasCover, chapters{index,title,durationMs,audioKind}) matches ApiDtos.cs ReaderIndexResponse/ReaderIndexChapter. `title` is null when unavailable but typed `string` (types.ts); harmless since the unavailable branch never reads it.
+- Chapter DTO fields match Core ReaderChapter (chapterIndex, title, durationMs, chunks, paragraphs{mode,sentences{text,startMs,endMs}}); `chunks` omits `normalizedText` (subset, OK). schemaVersion is a frontend-only field carried from the sidecar JSON.
+- Endpoints match: `/api/library/{id}/reader`, `/reader/chapters/{n}`, cover `/api/library/{id}/cover` (LibraryEndpoints.cs:26). `LibraryItemDto.hasReader` matches `HasReader` (ApiDtos.cs:51).
+
+### Correctness review
+- Stale fetch on chapter switch: both effects use a `cancelled` flag with cleanup, so late responses are dropped. Sound. Not covered by a test.
+- ResizeObserver: created in useLayoutEffect with disconnect cleanup, guarded for jsdom (`typeof ResizeObserver`). Not exercised by tests (jsdom lacks it), so the width-change path is only verified by the pure functions.
+- Pagination math: `pageCount = ceil((scrollWidth+gap)/stride - 1e-6)` consistent with the tests (3096 -> 3). `clampPage` and `spreadStart` compose correctly; `shown` is re-clamped on render so a shrinking count cannot leave an out-of-range page.
+- Effects cleanup, Spanish strings, a11y: TOC is a `nav` with aria-label and aria-current; icon-less text buttons; cover img has alt. All user strings Spanish.
+
+### Issues
+CRITICAL: none.
+WARNING: none blocking.
+SUGGESTION:
+1. ReaderPage.tsx:88-96 - while a chapter loads (`status: "loading"`) `<main>` is empty with no indicator, and the page/chapter footer buttons stay active with the previous layout count; add a "Cargando capítulo…" placeholder and disable page buttons until ready.
+2. ReaderPage.tsx:102-108 - "Página anterior/siguiente" are never disabled at bounds (spec only requires clamping, so compliant); disabling them or adding `aria-live="polite"` to PageIndicator.tsx would help screen readers.
+3. ReaderPage.tsx:45-56 / usePagination.ts - no test for the stale-response race or for ResizeObserver-driven recompute; add a fake ResizeObserver test in F3c when resize persistence lands.
+4. types.ts ReaderIndexDto - `title` should be `string | null` to mirror ApiDtos.cs.
+5. ReaderToc.tsx:14 - fills every index between min and max; a pathological sparse index (e.g. 1 and 5000) renders thousands of disabled buttons; cap or collapse gaps.
+
+### F3a verdict: PASS

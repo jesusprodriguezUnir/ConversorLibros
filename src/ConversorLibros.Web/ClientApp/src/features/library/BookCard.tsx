@@ -1,4 +1,5 @@
-import { FolderOpen, Clock, Layers, Download } from "lucide-react";
+import { Link } from "react-router-dom";
+import { FolderOpen, Clock, Layers, Download, BookOpen } from "lucide-react";
 import { api } from "../../shared/api/client";
 import type { LibraryItemDto } from "../../shared/api/types";
 import { Badge } from "../../shared/components/Badge";
@@ -68,6 +69,23 @@ export function BookCard({ book, onOpen, opening = false }: BookCardProps) {
           </div>
         </div>
 
+        <div className="flex flex-col gap-2">
+          {book.hasReader ? (
+            <Link
+              to={`/biblioteca/${encodeURIComponent(book.id)}/leer`}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#252C3D] bg-[#1B2130] text-[#EDF0F7] hover:border-[#3A4660] transition-colors"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Leer
+            </Link>
+          ) : (
+            <>
+              <Button variant="secondary" size="sm" disabled icon={<BookOpen className="w-3.5 h-3.5" />}>
+                Leer
+              </Button>
+              <p className="text-[11px] text-[#64728C]">Reconvierte el libro para habilitar el lector</p>
+            </>
+          )}
         <div className="flex gap-2">
           <Button
             variant="secondary"
@@ -88,6 +106,7 @@ export function BookCard({ book, onOpen, opening = false }: BookCardProps) {
             <Download className="w-3.5 h-3.5" />
             Descargar
           </a>
+        </div>
         </div>
       </div>
     </article>

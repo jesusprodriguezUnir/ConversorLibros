@@ -103,3 +103,35 @@ Mode: Strict TDD. Tasks 2.1-2.6 complete.
 - `ReaderStore` drops `null` entries from `bookmarks.json` on load (list and mutations).
 - Tests (RED then GREEN): `Audio_BookFolderIsJunctionOutsideOutputRoot_ReturnsNotFound`, `Reader_ReaderFolderIsJunctionOutsideOutputRoot_ReturnsNotFound`, `Bookmarks_FileWithNullEntry_ListsOnlyValidBookmarks`. Scoped run `Reader|LibraryLayout|LibraryAndBookEndpoints` → 55/55.
 - Not covered by a dedicated test: download endpoint over a junction (same `IsInside` path), file-level symlinks inside `reader/` (need Developer Mode to create).
+
+## F3a (static view + TOC): DONE (5/5), branch feat/read-along-reader-f3a
+
+Mode: Strict TDD. Tasks 3a.1-3a.5 complete.
+
+### TDD evidence
+| Task | Test file | RED | GREEN |
+|------|-----------|-----|-------|
+| 3a.1/3a.2 | reader/__tests__/pagination.test.ts, entries.test.ts | Import resolution failure (modules missing), 2 files failed | 10/10 |
+| 3a.3/3a.4 | reader/__tests__/ReaderPage.test.tsx (scrollWidth/clientWidth stubbed) | Import of `ReaderPage` failed | 8/8 (one fix: `translateX(-0px)` normalised to `0px`) |
+| 3a.5 | library/__tests__/BookCard.test.tsx | 3 failed (no "Leer") | 3/3 |
+
+Scoped run `npx vitest run src/features/reader src/features/library src/app` -> 27/27; `npx tsc --noEmit -p .` clean.
+
+### Deviations / notes
+- Tests live in `__tests__/` folders (repo convention), not next to the sources as the task text implied.
+- `LibraryItemDto.hasReader` added to the frontend type (required); `LibraryPage.test.tsx` fixtures updated.
+- Cover is the first column of the first chapter's content (`break-after: column`), shown only for the first indexed chapter; image error falls back to the title.
+- TOC lists every index between min and max indexed chapters; gaps render disabled as "Capitulo N".
+- Page controls clamp at chapter bounds (no auto-advance to the next chapter); chapter prev/next buttons exist. Indicator shows the first page of the spread.
+- Fixed styling only (single light theme, 1.125rem font); appearance is F3c. `ResizeObserver` is guarded for jsdom; `document.fonts.ready` re-measure is F3c.
+- Size: 784 added lines incl. tests (18 files) vs 400 budget / 600 hard stop; needs size:exception.
+- Not run: full frontend suite, `npm run build`, manual browser check of real column layout.
+
+- F3a accepted as `size:exception` by the user (2026-11-23): ~812 changed lines (incl. tests and docs) vs 400 budget.
+
+### F3a verify follow-up (suggestions 1, 4, 5)
+- Chapter loading shows `role=status` "Cargando capítulo…" and disables page prev/next until the chapter is ready (the layout still describes the previous chapter).
+- `ReaderIndexDto.title` is `string | null` (mirrors `ApiDtos.cs`); `CoverPage` falls back to "Portada del libro" / "Sin título".
+- `ReaderToc` collapses each run of missing indexes into one disabled entry ("Capítulo N" or "Capítulos N–M"), so the list is bounded by the indexed chapter count.
+- Tests (RED then GREEN): loading status, sparse TOC (1 and 5000 → 3 entries), null title. Scoped `vitest run src/features/reader src/features/library src/app` → 30/30; `tsc --noEmit` clean.
+- Deferred to F3c: suggestion 2 (bound-disabled page buttons, `aria-live` indicator) and 3 (stale-fetch race and ResizeObserver tests).

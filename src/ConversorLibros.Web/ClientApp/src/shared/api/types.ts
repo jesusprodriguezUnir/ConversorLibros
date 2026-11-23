@@ -54,6 +54,42 @@ export interface LibraryItemDto {
   durationSeconds: number | null;
   hasCover: boolean;
   coverUrl: string | null;
+  hasReader: boolean;
+}
+
+export interface ReaderIndexChapterDto {
+  index: number;
+  title: string;
+  durationMs: number;
+  audioKind: string | null;
+}
+
+export interface ReaderIndexDto {
+  available: boolean;
+  reason: "no-data" | "unreadable" | null;
+  title: string | null;
+  hasCover: boolean;
+  chapters: ReaderIndexChapterDto[];
+}
+
+export interface ReaderSentenceDto {
+  text: string;
+  startMs: number;
+  endMs: number;
+}
+
+export interface ReaderParagraphDto {
+  mode: "sentence" | "paragraph";
+  sentences: ReaderSentenceDto[];
+}
+
+export interface ReaderChapterDto {
+  schemaVersion: number;
+  chapterIndex: number;
+  title: string;
+  durationMs: number;
+  chunks: { order: number; startMs: number; endMs: number }[];
+  paragraphs: ReaderParagraphDto[];
 }
 
 export interface ChapterSummaryDto {
