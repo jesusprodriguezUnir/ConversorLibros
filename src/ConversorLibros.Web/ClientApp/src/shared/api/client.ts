@@ -6,6 +6,8 @@ import type {
   LibraryItemDto,
   ReaderChapterDto,
   ReaderIndexDto,
+  ReaderProgressDto,
+  SaveReaderProgressRequest,
   SettingsResponse,
   StartConversionRequest,
   TestOllamaResponse,
@@ -60,6 +62,24 @@ export const api = {
   async getReaderChapter(id: string, index: number): Promise<ReaderChapterDto> {
     const res = await fetch(`/api/library/${encodeURIComponent(id)}/reader/chapters/${index}`);
     return parseJson<ReaderChapterDto>(res);
+  },
+
+  /** Saved resume position, or null when none is stored (204). */
+  async getReaderProgress(id: string): Promise<ReaderProgressDto | null> {
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}/reader/progress`);
+    if (res.status === 204) return null;
+    return parseJson<ReaderProgressDto>(res);
+  },
+
+  /** `keepalive` lets the request outlive the page (used when it is being hidden). */
+  async saveReaderProgress(id: string, progress: SaveReaderProgressRequest, keepalive = false): Promise<void> {
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}/reader/progress`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(progress),
+      ...(keepalive ? { keepalive: true } : {}),
+    });
+    if (!res.ok) await parseJson(res);
   },
 
   readerAudioUrl(id: string, index: number): string {

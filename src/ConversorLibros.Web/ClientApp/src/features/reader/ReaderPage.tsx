@@ -15,6 +15,7 @@ import { SPEED_STEP, bookPercent } from "./sync";
 import { useAudioSync } from "./useAudioSync";
 import { useAutoFollow } from "./useAutoFollow";
 import { useReanchor } from "./useReanchor";
+import { useReaderProgress } from "./useReaderProgress";
 import "./reader.css";
 
 const RECONVERT_HINT = "Reconvierte el libro para habilitar el lector";
@@ -44,6 +45,7 @@ function ReaderView() {
   const [audio] = useState(() => new Audio());
   const contentRef = useRef<HTMLDivElement>(null);
   const follow = useAutoFollow();
+  const resumeSyncRef = useRef(false);
   const { theme, fontStep } = useReaderAppearance();
   const [fontsTick, setFontsTick] = useState(0);
 
@@ -58,6 +60,7 @@ function ReaderView() {
   // A manual pick drops any pending autoplay; `onEnded` re-arms it after calling this.
   const selectChapter = (chapterIndex: number) => {
     sync.cancelAutoplay();
+    resumeSyncRef.current = false;
     follow.resume();
     setCurrent(chapterIndex);
     setPage(0);
@@ -82,6 +85,29 @@ function ReaderView() {
     },
   });
 
+  const resumeSeek = useCallback(
+    (ms: number) => {
+      resumeSyncRef.current = true;
+      sync.seekTo(ms);
+    },
+    [sync.seekTo]
+  );
+
+  const progress = useReaderProgress({
+    id,
+    audio,
+    current,
+    playing: sync.playing,
+    ready: chapter !== null && chapter.chapterIndex === current,
+    durationMs: chapter?.durationMs ?? 0,
+    seekTo: resumeSeek,
+  });
+  // The resume seek runs before the layout settles: re-page to the resumed entry on each layout change until the
+  // user turns a page or picks a chapter.
+  useEffect(() => {
+    if (resumeSyncRef.current) sync.syncNow();
+  }, [layout, sync.syncNow]);
+
   // Web fonts change glyph widths once loaded, which reflows the columns.
   useEffect(() => {
     let cancelled = false;
@@ -100,7 +126,8 @@ function ReaderView() {
     stride: layout.stride,
     count: layout.count,
     relayoutKey,
-    followedEntry: () => (sync.playing && follow.following ? entryAtMs(entries, audio.currentTime * 1000) : -1),
+    followedEntry: () =>
+      resumeSyncRef.current || (sync.playing && follow.following) ? entryAtMs(entries, audio.currentTime * 1000) : -1,
     onPage: setPage,
   });
 
@@ -108,17 +135,19 @@ function ReaderView() {
     let cancelled = false;
     api
       .getReaderIndex(id)
-      .then((index) => {
+      .then(async (index) => {
         if (cancelled) return;
         if (!index.available || index.chapters.length === 0) return setIndexState({ status: "unavailable" });
+        const start = await progress.loadResume(index.chapters);
+        if (cancelled) return;
         setIndexState({ status: "ready", index });
-        setCurrent(index.chapters[0].index);
+        setCurrent(start);
       })
       .catch(() => !cancelled && setIndexState({ status: "unavailable" }));
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, progress.loadResume]);
 
   useEffect(() => {
     if (current === null) return;
@@ -154,6 +183,7 @@ function ReaderView() {
   const start = spreadStart(shown, layout.ppv);
   // Turning pages by hand while audio plays suspends auto-follow.
   const manualGo = (p: number) => {
+    resumeSyncRef.current = false;
     if (sync.playing) follow.suspend();
     go(p);
   };

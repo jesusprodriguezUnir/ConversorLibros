@@ -72,6 +72,18 @@ export interface ReaderIndexDto {
   chapters: ReaderIndexChapterDto[];
 }
 
+/** Single resume position: chapter + ms only, so it is independent of layout. */
+export interface ReaderProgressDto {
+  chapterIndex: number;
+  ms: number;
+  updatedAt: string;
+}
+
+export interface SaveReaderProgressRequest {
+  chapterIndex: number;
+  ms: number;
+}
+
 export interface ReaderSentenceDto {
   text: string;
   startMs: number;
