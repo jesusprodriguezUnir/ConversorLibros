@@ -15,6 +15,7 @@ import { SPEED_STEP, bookPercent } from "./sync";
 import { useAudioSync } from "./useAudioSync";
 import { useAutoFollow } from "./useAutoFollow";
 import { useReanchor } from "./useReanchor";
+import { useBookmarks } from "./useBookmarks";
 import { useReaderProgress } from "./useReaderProgress";
 import "./reader.css";
 
@@ -101,6 +102,25 @@ function ReaderView() {
     ready: chapter !== null && chapter.chapterIndex === current,
     durationMs: chapter?.durationMs ?? 0,
     seekTo: resumeSeek,
+  });
+  // A bookmark jump behaves like a resume seek (page follows the audio) but re-enables auto-follow.
+  const bookmarkSeek = useCallback(
+    (ms: number) => {
+      follow.resume();
+      resumeSeek(ms);
+    },
+    [follow.resume, resumeSeek]
+  );
+  const bookmarks = useBookmarks({
+    id,
+    audio,
+    chapters,
+    current,
+    ready: chapter !== null && chapter.chapterIndex === current,
+    durationMs: chapter?.durationMs ?? 0,
+    entries,
+    selectChapter,
+    seekTo: bookmarkSeek,
   });
   // The resume seek runs before the layout settles: re-page to the resumed entry on each layout change until the
   // user turns a page or picks a chapter.
@@ -235,6 +255,15 @@ function ReaderView() {
         onSkip={sync.skip}
         onSpeed={(direction) => sync.changeSpeed(direction * SPEED_STEP)}
         onBackToAudio={backToAudio}
+        bookmarks={{
+          bookmarks: bookmarks.bookmarks,
+          chapters: index.chapters,
+          error: bookmarks.error,
+          canAdd: pageReady && chapter !== null && chapter.chapterIndex === current && !bookmarks.adding,
+          onAdd: () => void bookmarks.add(),
+          onJump: bookmarks.jump,
+          onDelete: (b) => void bookmarks.remove(b),
+        }}
       />
       <footer className="reader-controls">
         <button type="button" disabled={prevChapter === undefined} onClick={() => selectChapter(prevChapter)}>

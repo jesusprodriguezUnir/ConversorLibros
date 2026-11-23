@@ -3,7 +3,9 @@ import type {
   ConversionStateDto,
   FileSystemBrowseResponse,
   InspectedBookDto,
+  CreateReaderBookmarkRequest,
   LibraryItemDto,
+  ReaderBookmarkDto,
   ReaderChapterDto,
   ReaderIndexDto,
   ReaderProgressDto,
@@ -79,6 +81,30 @@ export const api = {
       body: JSON.stringify(progress),
       ...(keepalive ? { keepalive: true } : {}),
     });
+    if (!res.ok) await parseJson(res);
+  },
+
+  /** The server answers an empty list for a missing or corrupt bookmarks file. */
+  async getReaderBookmarks(id: string): Promise<ReaderBookmarkDto[]> {
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}/reader/bookmarks`);
+    return parseJson<ReaderBookmarkDto[]>(res);
+  },
+
+  /** 201 with the created bookmark; 400 when the chapter does not exist or `ms` is negative. */
+  async addReaderBookmark(id: string, bookmark: CreateReaderBookmarkRequest): Promise<ReaderBookmarkDto> {
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}/reader/bookmarks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bookmark),
+    });
+    return parseJson<ReaderBookmarkDto>(res);
+  },
+
+  async deleteReaderBookmark(id: string, bookmarkId: string): Promise<void> {
+    const res = await fetch(
+      `/api/library/${encodeURIComponent(id)}/reader/bookmarks/${encodeURIComponent(bookmarkId)}`,
+      { method: "DELETE" }
+    );
     if (!res.ok) await parseJson(res);
   },
 

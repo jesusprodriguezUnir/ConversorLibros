@@ -342,3 +342,26 @@ Findings
 No regressions of F3a-F3d observed (reader/library/app suites green).
 
 ### F4a verdict: PASS WITH WARNINGS
+
+## F4b (tasks 4.3, 4.4, 4.5: bookmarks UI and CLAUDE.md)
+
+Runs: `npx vitest run src/features/reader src/features/library src/app` -> 15 files / 132 tests green on 4 of 5 runs; `npx tsc --noEmit -p .` clean. The very first (cold) run had 1 failure in a reader page test (`expect(getByText(/página 1 de 3/i))`, around line 74 of its test file) that did not reproduce in 4 reruns (flaky under load, pre-existing area, not bookmark code).
+
+Verified OK
+- Client matches backend: GET/POST `/reader/bookmarks` (201 + body), DELETE `/reader/bookmarks/{guid}` (204); request DTO fields chapterIndex/ms/excerpt/note match `CreateBookmarkRequest`. PUT (note edit) is not used by the UI (not required by 4.3-4.5). 400/404/409 all go through `parseJson` errors and surface as the generic Spanish error message.
+- Pending-seek design: `pendingRef` is tied to `{chapter, ms}`, applied once when `ready && pending.chapter === current`, clamped to `durationMs`, dropped when `current` becomes another chapter (useBookmarks.ts:116-119). Applying it goes through `resumeSeek` so `resumeSyncRef` re-paging works; `selectChapter` resets that flag first, so no stale re-page flag. It cannot leak into `useReaderProgress`: its pending is dropped on chapter change (useReaderProgress.ts:68-70), and when both are pending in the same chapter the bookmark effect runs last and wins. Progress saves stay gated on `ready`, and the chapter change saves `{chapter, 0}`, so no wrong-offset save.
+- Scenarios covered by behavior tests: add (excerpt <=160), jump same chapter, cross-chapter jump with ms clamp, reload list, removed chapter (disabled but deletable), corrupt list -> empty. Panel a11y: aria-expanded/controls, Escape returns focus, focus returns to toggle on jump.
+- CLAUDE.md entry matches ReaderEndpoints routes, status codes (422 corrupt chapter, 204 no progress, 409 newer schema), 160 cap and hook/component names; style consistent with neighbors.
+
+Findings
+- CRITICAL: none.
+- WARNING: useBookmarks.ts:57 / :39 - spec requires bookmarks "ordered by chapter then ms". The server returns file order (ReaderStore.cs:211-212, no sort) and the client appends new ones at the end, so the list is in creation order. No test asserts ordering. Fix: sort in the hook (chapterIndex, ms) on load and on add.
+- WARNING: useBookmarks.ts:46-61 - no in-flight guard on add: a double click sends two POSTs and creates two identical bookmarks. Fix: busy flag/ref and disable the button meanwhile. Untested.
+- WARNING: BookmarksPanel.tsx:72-74 - after deleting the item that holds focus, the button unmounts and focus falls to `body` (a11y requirement: focus after deleting). Move focus to the next item, the previous one or the add button. Untested.
+- WARNING: useBookmarks.ts:55 - `text.slice(0, 160)` is UTF-16 based and can cut a surrogate pair, sending a lone surrogate. The server also truncates by UTF-16 (ReaderStore.cs:216), so a lone surrogate may reach `System.Text.Json` and fail the POST (generic "No se pudo guardar"). Fix: cut by code points (`Array.from(text).slice(0,160).join("")` would still exceed 160 UTF-16 units for astral chars, so truncate by units but back off one if the last unit is a high surrogate). Rare (emoji at position 160), no test.
+- WARNING: tests missing for: delete failure message, add failure message at hook level, manual chapter change dropping a pending jump, stale response after book id change, add while chapter loading. The pending-drop logic (useBookmarks.ts:116-119) is the riskiest piece and has no direct test.
+- SUGGESTION: useBookmarks.ts:52-57 and :67-68 - add/remove responses are not guarded by a cancelled/id check, so a response arriving after the book id changed could append to the new book's list (only reachable on route param change with the same mounted component).
+- SUGGESTION: ReaderPage.tsx:219/:119 - `canAdd` uses `chapterState.status === "ready"` while the hook uses `chapter.chapterIndex === current`; for one render after a chapter change `canAdd` can be true while `audio.currentTime` still belongs to the previous chapter. Use the same `ready` flag for both.
+- SUGGESTION: BookmarksPanel.tsx:69-70 - the button accessible name concatenates label and excerpt without a separator; consider a visually-hidden separator or `aria-describedby` for the excerpt.
+
+### F4b verdict: PASS WITH WARNINGS
