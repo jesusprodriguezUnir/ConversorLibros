@@ -133,4 +133,54 @@ describe("AppearancePanel", () => {
     expect(screen.getByRole("button", { name: "Aumentar texto" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reducir texto" })).toBeEnabled();
   });
+
+  it("closes on Escape and returns focus to the toggle", async () => {
+    const user = userEvent.setup();
+    render(<AppearancePanel />, { wrapper });
+    const toggle = screen.getByRole("button", { name: "Apariencia" });
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    screen.getByRole("radio", { name: "Claro" }).focus();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("group", { name: "Opciones de apariencia" })).not.toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveFocus();
+  });
+
+  it("points the toggle at the panel with aria-controls", async () => {
+    const user = userEvent.setup();
+    render(<AppearancePanel />, { wrapper });
+    const toggle = screen.getByRole("button", { name: "Apariencia" });
+    await user.click(toggle);
+    expect(screen.getByRole("group", { name: "Opciones de apariencia" })).toHaveAttribute(
+      "id",
+      toggle.getAttribute("aria-controls")
+    );
+  });
+
+  it("moves focus to the other font button when one reaches a bound", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: "light", fontStep: MAX - 1 }));
+    render(<AppearancePanel />, { wrapper });
+    await user.click(screen.getByRole("button", { name: "Apariencia" }));
+
+    await user.click(screen.getByRole("button", { name: "Aumentar texto" }));
+
+    expect(screen.getByRole("button", { name: "Aumentar texto" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reducir texto" })).toHaveFocus();
+  });
+
+  it("shows and announces the current font size", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: "light", fontStep: 1 }));
+    render(<AppearancePanel />, { wrapper });
+    await user.click(screen.getByRole("button", { name: "Apariencia" }));
+
+    const size = screen.getByText("Tamaño del texto: 16 px");
+    expect(size).toHaveAttribute("aria-live", "polite");
+    await user.click(screen.getByRole("button", { name: "Aumentar texto" }));
+    expect(size).toHaveTextContent("Tamaño del texto: 18 px");
+  });
 });
