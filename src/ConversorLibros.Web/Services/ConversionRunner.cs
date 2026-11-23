@@ -88,6 +88,7 @@ public sealed class CoreConversionRunner : IConversionRunner
             new WavChapterAssembler(),
             translator);
 
+        var syncMaps = new List<ChapterSyncMap>();
         var chapterWavs = await pipeline.ConvertAsync(
             request.EpubPath,
             layout.WorkDir,
@@ -97,7 +98,8 @@ public sealed class CoreConversionRunner : IConversionRunner
             cancellationToken: ct,
             sourceLanguage: request.SourceLanguage,
             targetLanguage: translate ? TargetLanguage : null,
-            chapterIndexes: request.ChapterIndexes);
+            chapterIndexes: request.ChapterIndexes,
+            onChapterSynced: syncMaps.Add);
 
         ct.ThrowIfCancellationRequested();
 
@@ -129,8 +131,8 @@ public sealed class CoreConversionRunner : IConversionRunner
 
         try
         {
-            var outputPath = await exporter.ExportAsync(request.Book, chapters, exportRoot, ct);
-            return new ConversionRunResult(outputPath, null);
+            return await ReaderDataPublisher.ExportThenPublishAsync(
+                exporter, request.Book, chapters, exportRoot, syncMaps, chapterWavs.Count, layout.BookDir, request.Format, ct);
         }
         catch (FfmpegNotFoundException)
         {
