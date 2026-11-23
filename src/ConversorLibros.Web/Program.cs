@@ -21,6 +21,8 @@ builder.Services.AddSingleton(new PiperModelLocator(
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
 builder.Services.AddSingleton<JsonSettingsStore>();
 builder.Services.AddSingleton<UploadedBookStore>();
+builder.Services.AddSingleton<LibraryBookResolver>();
+builder.Services.AddSingleton<ReaderStore>();
 builder.Services.AddSingleton<IConversionRunner, CoreConversionRunner>();
 builder.Services.AddSingleton<ConversionJobManager>();
 
@@ -32,6 +34,7 @@ app.UseStaticFiles();
 app.MapSettingsEndpoints();
 app.MapFileSystemEndpoints();
 app.MapLibraryEndpoints();
+app.MapReaderEndpoints();
 app.MapBookEndpoints();
 app.MapConversionEndpoints();
 

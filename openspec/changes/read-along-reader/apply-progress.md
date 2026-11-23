@@ -72,3 +72,34 @@ Mode: Strict TDD. Tasks 1.1-1.5 complete.
 - W4 fixed: pinning tests for blank raw text, no chunks, resync never found and paragraph boundaries on chunk boundaries (they passed on first run: they characterize existing behavior).
 - W3 (short duplicated paragraph anchoring at an earlier duplicate) deferred as tech debt: timing-only degradation.
 - Scoped runs: Core 34/34, Web 14/14.
+
+## F2 (reader API): DONE (6/6), branch feat/read-along-reader-f2
+
+Mode: Strict TDD. Tasks 2.1-2.6 complete.
+
+### TDD evidence
+| Task | Test file | RED | GREEN |
+|------|-----------|-----|-------|
+| 2.1-2.3 | Web.Tests/ReaderEndpointsTests.cs (48 cases incl. theories) | After adding only the `HasReader` DTO field: 23+ tests failed (404 from missing routes) | 48/48 |
+| 2.4 | Web.Tests/LibraryAndBookEndpointsTests.cs (+1) | Compile error CS1061: `HasReader` missing, then runtime failure | pass |
+| 2.5/2.6 | `LibraryIds`, `LibraryBookResolver`, `ReaderStore`, `ReaderEndpoints`, DI + route registration | n/a | `dotnet test tests/ConversorLibros.Web.Tests --filter "Reader|Library|ConversionEndpoints"` → 78/78 (with `-p:BaseOutputPath=<scratch>`) |
+
+### Deviations / notes
+- Design said `GET /reader` returns 404 when there is no index; implemented per spec: 200 with `available:false` and reason `no-data` (or `unreadable` for a corrupt/unknown-schema index). 404 only for unknown id or non-Opus book.
+- Corrupt chapter JSON returns 422 with an `ErrorResponse`; the chapter is validated with `JsonDocument` before serving.
+- Index response adds `hasCover` (spec: "cover availability").
+- Bookmark `excerpt` is accepted in POST and truncated to 160 chars server-side; blank notes are stored as null.
+- Unknown schemaVersion: GET treats the file as empty (204 / empty list); PUT/POST/DELETE return 409 and never overwrite. Validation errors (400) take precedence over 409 on progress/bookmark create.
+- All reads and writes of progress/bookmarks share the per-book semaphore; reads open with FileShare.ReadWrite|Delete so File.Move never collides.
+- `LibraryBookResolver` only matches direct subfolders of OutputRoot that contain top-level `*.opus`; `LibraryIds.Compute` is a verbatim extraction (existing library tests green).
+- Size: ~475 new production lines in src (442 new files + 33 modified), ~490 test lines. Total ~965 vs 400 budget; needs size:exception like F0/F1.
+- Not run: full suite, manual curl harness against a real book.
+
+- F2 accepted as `size:exception` by the user (2026-11-23): ~965 changed lines vs 400 budget.
+
+### F2 verify follow-up (W1 + null bookmarks)
+- `LibraryScanner.IsInside` now rejects any existing junction/symlink component below the root (not just path text). Covers the resolver, the audio endpoint and the pre-existing download endpoint (`LibraryEndpoints.cs`).
+- `LibraryBookResolver` also rejects a book whose `reader/` folder is a link.
+- `ReaderStore` drops `null` entries from `bookmarks.json` on load (list and mutations).
+- Tests (RED then GREEN): `Audio_BookFolderIsJunctionOutsideOutputRoot_ReturnsNotFound`, `Reader_ReaderFolderIsJunctionOutsideOutputRoot_ReturnsNotFound`, `Bookmarks_FileWithNullEntry_ListsOnlyValidBookmarks`. Scoped run `Reader|LibraryLayout|LibraryAndBookEndpoints` → 55/55.
+- Not covered by a dedicated test: download endpoint over a junction (same `IsInside` path), file-level symlinks inside `reader/` (need Developer Mode to create).

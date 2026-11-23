@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Security.Cryptography;
-using System.Text;
 using ConversorLibros.Core.Abstractions;
 using ConversorLibros.Core.Services;
 using ConversorLibros.Web.Models;
@@ -88,7 +86,7 @@ public static class LibraryEndpoints
         }
 
         return LibraryScanner.Scan(outputRoot)
-            .Select(summary => (ComputeId(summary.Path), summary))
+            .Select(summary => (LibraryIds.Compute(summary.Path), summary))
             .ToList();
     }
 
@@ -134,14 +132,8 @@ public static class LibraryEndpoints
             ChapterCount: summary.ChapterCount,
             DurationSeconds: summary.Duration?.TotalSeconds,
             HasCover: hasCover,
-            CoverUrl: hasCover ? $"/api/library/{id}/cover" : null);
-    }
-
-    private static string ComputeId(string fullPath)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(fullPath.ToLowerInvariant()));
-        return Convert.ToBase64String(hash)[..16]
-            .Replace('+', '-')
-            .Replace('/', '_');
+            CoverUrl: hasCover ? $"/api/library/{id}/cover" : null,
+            HasReader: summary.Format == AudiobookFormat.Opus
+                       && File.Exists(Path.Combine(summary.Path, ReaderSidecarWriter.FolderName, "index.json")));
     }
 }
