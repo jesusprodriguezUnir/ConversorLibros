@@ -73,11 +73,11 @@ Constraints for all slices: no Core constructor changes (only the optional trail
 
 ## F3b: Audio sync (spec: reader-ui)
 
-- [ ] 3b.1 RED: `sync.test.ts` (`findActiveEntry`, `pageTurnFraction`, `skipMs` bounds, `clampSpeed` 0.75–2, `bookPercent`). Scenarios: Skip bounds; Speed range.
-- [ ] 3b.2 GREEN: `sync.ts`.
-- [ ] 3b.3 RED: `useAudioSync.test.tsx` (fake rAF/audio): highlight follows, paragraph fallback highlights the whole paragraph, sentence spanning pages turns by fraction, chapter end, click-to-seek, audio load error. Scenarios: Highlight follows audio; Paragraph fallback; Sentence spanning two pages; Chapter ends; Click to seek; Audio load error.
-- [ ] 3b.4 RED: `useAutoFollow.test.tsx`: manual navigation suspends follow and shows "Volver al audio"; button and click-to-seek resume. Scenarios: Suspend; Resume follow; Click-to-seek resumes follow.
-- [ ] 3b.5 GREEN: `useAudioSync`, `useAutoFollow`, `AudioControls`, `BackToAudioButton`, `ReaderToolbar` (classList toggle on `[data-entry]`).
+- [x] 3b.1 RED: `sync.test.ts` (`findActiveEntry`, `pageTurnFraction`, `skipMs` bounds, `clampSpeed` 0.75–2, `bookPercent`). Scenarios: Skip bounds; Speed range.
+- [x] 3b.2 GREEN: `sync.ts`.
+- [x] 3b.3 RED: `useAudioSync.test.tsx` (fake rAF/audio): highlight follows, paragraph fallback highlights the whole paragraph, sentence spanning pages turns by fraction, chapter end, click-to-seek, audio load error. Scenarios: Highlight follows audio; Paragraph fallback; Sentence spanning two pages; Chapter ends; Click to seek; Audio load error.
+- [x] 3b.4 RED: `useAutoFollow.test.tsx`: manual navigation suspends follow and shows "Volver al audio"; button and click-to-seek resume. Scenarios: Suspend; Resume follow; Click-to-seek resumes follow.
+- [x] 3b.5 GREEN: `useAudioSync`, `useAutoFollow`, `AudioControls`, `BackToAudioButton`, `ReaderToolbar` (classList toggle on `[data-entry]`).
 
 ## F3c: Appearance + spread (spec: reader-ui)
 
