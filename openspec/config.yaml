@@ -1,0 +1,49 @@
+schema: spec-driven
+
+context: |
+  Offline EPUB (DRM-free) to audiobook converter, Spanish (es-ES) TTS. Personal use, Windows only.
+  Stack: .NET 10 (Core, Cli, Web, MAUI App outside the .sln), sherpa-onnx 1.13.8 (pinned), VersOne.Epub + AngleSharp, ffmpeg.
+  Web host: ASP.NET Core + React 19 / Vite 6 / Tailwind 4 / TypeScript 5.8 in src/ConversorLibros.Web/ClientApp.
+  Architecture: Core is platform-agnostic; three composition roots (Cli/Program.cs, App/Services/ConversionService.cs, Web/Services/ConversionRunner.cs).
+  Invariants: deterministic TextChunk.Hash (resumable cache), bump PromptVersion on translation prompt/model changes, stream chapters to disk.
+  Language: code, comments and technical artifacts in English; docs and user-facing strings in Spanish.
+
+strict_tdd: true
+
+testing:
+  strict_tdd: true
+  runner:
+    backend:
+      command: "dotnet test <project> --filter \"FullyQualifiedName~X\""
+      framework: xUnit 2.9.3 (Microsoft.NET.Test.Sdk 17.12.0)
+      projects: [tests/ConversorLibros.Core.Tests, tests/ConversorLibros.Web.Tests]
+    frontend:
+      command: "npx vitest run <path>"
+      cwd: src/ConversorLibros.Web/ClientApp
+      framework: Vitest 3 + jsdom + Testing Library
+  layers:
+    unit: {available: true, tool: "xUnit / Vitest"}
+    integration: {available: true, tool: "Microsoft.AspNetCore.Mvc.Testing (WebApplicationFactory); Testing Library"}
+    e2e: {available: false, tool: null}
+  coverage: {available: false, command: null}
+  quality:
+    linter: {available: false, command: null}
+    type_checker: {available: true, command: "npx tsc -b (frontend); dotnet build (C#)"}
+    formatter: {available: false, command: null}
+
+rules:
+  proposal:
+    - Flag changes touching Core service constructors: all three composition roots must be updated.
+  specs:
+    - Use Given/When/Then scenarios; keep specs in English.
+  design:
+    - Respect the Core / host split; do not buffer whole chapters in memory.
+  tasks:
+    - Forecast against the 400 changed-line review budget; delivery_strategy is ask-on-risk.
+  apply:
+    - Strict TDD; scope tests with --filter or vitest run <path>, never the full suite unless asked.
+    - Never concatenate process arguments; use ProcessStartInfo.ArgumentList.
+  verify:
+    - Run scoped tests plus dotnet build ConversorLibros.sln; MAUI App is built separately.
+  archive:
+    - Merge delta specs into openspec/specs before moving the change to archive.

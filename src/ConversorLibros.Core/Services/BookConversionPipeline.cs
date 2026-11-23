@@ -50,7 +50,8 @@ public sealed class BookConversionPipeline
         CancellationToken cancellationToken = default,
         string? sourceLanguage = null,
         string? targetLanguage = null,
-        IReadOnlySet<int>? chapterIndexes = null)
+        IReadOnlySet<int>? chapterIndexes = null,
+        Action<ChapterSyncMap>? onChapterSynced = null)
     {
         var translate = sourceLanguage is not null || targetLanguage is not null;
         if (translate && (string.IsNullOrWhiteSpace(sourceLanguage) || string.IsNullOrWhiteSpace(targetLanguage)))
@@ -114,6 +115,14 @@ public sealed class BookConversionPipeline
 
             var chapterPath = await _chapterAssembler.AssembleChapterAsync(chapter.Index, chunkPaths, outputDirectory, cancellationToken).ConfigureAwait(false);
             assembledChapters.Add(chapterPath);
+
+            // Timings use the post-translation chapter, so the reader shows what is spoken.
+            // A null map (unreadable or mismatched chunk WAVs) only skips the reader data.
+            if (onChapterSynced is not null && SyncMapBuilder.Build(chapter, chunks, chunkPaths) is { } syncMap)
+            {
+                onChapterSynced(syncMap);
+            }
+
             progress?.Report(new ConversionProgress(chapter.Index, selectedChapters.Count, chunks.Count, chunks.Count, "Assembled"));
         }
 
