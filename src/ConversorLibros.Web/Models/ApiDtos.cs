@@ -47,7 +47,32 @@ public sealed record LibraryItemDto(
     int ChapterCount,
     double? DurationSeconds,
     bool HasCover,
-    string? CoverUrl);
+    string? CoverUrl,
+    bool HasReader = false);
+
+public sealed record ReaderIndexChapter(int Index, string Title, long DurationMs, string? AudioKind);
+
+/// <summary>On-disk <c>reader/index.json</c> (camelCase, schemaVersion 1).</summary>
+public sealed record ReaderIndexFile(int SchemaVersion, string Title, IReadOnlyList<ReaderIndexChapter>? Chapters);
+
+/// <param name="Available">False when the book has no usable reader data; <c>Reason</c> then says why.</param>
+public sealed record ReaderIndexResponse(
+    bool Available,
+    string? Reason,
+    string? Title,
+    bool HasCover,
+    IReadOnlyList<ReaderIndexChapter> Chapters);
+
+public sealed record ReaderProgress(int ChapterIndex, long Ms, DateTimeOffset UpdatedAt);
+
+public sealed record ReaderBookmark(
+    Guid Id, int ChapterIndex, long Ms, string? Excerpt, string? Note, DateTimeOffset CreatedAt);
+
+public sealed record SaveProgressRequest(int ChapterIndex, long Ms);
+
+public sealed record CreateBookmarkRequest(int ChapterIndex, long Ms, string? Note, string? Excerpt);
+
+public sealed record UpdateBookmarkNoteRequest(string? Note);
 
 /// <summary>
 /// Chapter summary for the inspect response. Word and duration figures are computed on normalized text
