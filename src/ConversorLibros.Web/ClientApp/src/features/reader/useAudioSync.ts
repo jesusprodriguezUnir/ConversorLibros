@@ -27,7 +27,7 @@ function toggleActive(content: HTMLElement, index: number, on: boolean) {
 }
 
 /** Page of every line (client rect) of an entry; rects are measured against the transformed content. */
-function entryPages(content: HTMLElement, index: number, stride: number): number[] {
+export function entryPages(content: HTMLElement, index: number, stride: number): number[] {
   const el = content.querySelector(`[data-entry="${index}"]`);
   if (!el) return [];
   const left = content.getBoundingClientRect().left;

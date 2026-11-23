@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { AudioControls } from "./AudioControls";
+import { AppearancePanel } from "./AppearancePanel";
 import { BackToAudioButton } from "./BackToAudioButton";
 
 interface Props extends ComponentProps<typeof AudioControls> {
@@ -14,6 +15,7 @@ export function ReaderToolbar({ percent, suspended, onBackToAudio, ...audio }: P
       <AudioControls {...audio} />
       <span>Libro: {percent} %</span>
       {suspended && <BackToAudioButton onClick={onBackToAudio} />}
+      <AppearancePanel />
     </div>
   );
 }

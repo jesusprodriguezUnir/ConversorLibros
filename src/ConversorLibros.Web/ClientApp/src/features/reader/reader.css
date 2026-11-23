@@ -4,8 +4,8 @@
   grid-template-rows: auto 1fr auto auto;
   grid-template-areas: "bar bar" "toc main" "toc audio" "toc controls";
   height: 100vh;
-  background: #f7f4ee;
-  color: #222;
+  background: var(--reader-bg);
+  color: var(--reader-fg);
 }
 .reader-error {
   display: flex;
@@ -19,14 +19,14 @@
   display: flex;
   gap: 1rem;
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #0002;
+  border-bottom: 1px solid var(--reader-border);
 }
 .reader-toc {
   grid-area: toc;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  border-right: 1px solid #0002;
+  border-right: 1px solid var(--reader-border);
 }
 .reader-toc button {
   padding: 0.5rem 1rem;
@@ -50,7 +50,7 @@
 .reader-content {
   height: 100%;
   column-fill: auto;
-  font-size: 1.125rem;
+  font-size: var(--reader-font-size, 1.125rem);
   line-height: 1.7;
 }
 .reader-content p {
@@ -76,7 +76,7 @@
   justify-content: center;
   gap: 1rem;
   padding: 0.5rem 1rem;
-  border-top: 1px solid #0002;
+  border-top: 1px solid var(--reader-border);
 }
 .reader-audio {
   display: flex;
@@ -87,7 +87,7 @@
   cursor: pointer;
 }
 .reader-content .reader-active {
-  background: #ffd54f88;
+  background: var(--reader-highlight);
   border-radius: 0.2em;
 }
 .reader-controls {
@@ -97,5 +97,43 @@
   justify-content: center;
   gap: 1rem;
   padding: 0.5rem 1rem;
-  border-top: 1px solid #0002;
+  border-top: 1px solid var(--reader-border);
+}
+.reader-shell,
+.reader-shell[data-theme="light"] {
+  --reader-bg: #f7f4ee;
+  --reader-fg: #222;
+  --reader-border: #0002;
+  --reader-highlight: #ffd54f88;
+  --reader-panel: #fff;
+}
+.reader-shell[data-theme="sepia"] {
+  --reader-bg: #f4ecd8;
+  --reader-fg: #5b4636;
+  --reader-border: #5b463633;
+  --reader-highlight: #e0b45a88;
+  --reader-panel: #faf3e3;
+}
+.reader-shell[data-theme="dark"] {
+  --reader-bg: #1b1b1f;
+  --reader-fg: #d8d8dc;
+  --reader-border: #ffffff33;
+  --reader-highlight: #8a6d1f99;
+  --reader-panel: #26262b;
+  color-scheme: dark;
+}
+.reader-appearance {
+  position: relative;
+}
+.reader-appearance-panel {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--reader-panel);
+  border: 1px solid var(--reader-border);
+  border-radius: 0.4rem;
 }

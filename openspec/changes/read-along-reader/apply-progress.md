@@ -166,3 +166,33 @@ Mode: Strict TDD. Tasks 3b.1-3b.5 complete.
 - `useAudioSync` re-applies the chosen speed and resets `playing`/`positionMs` after every source change; new `cancelAutoplay()`, called by `ReaderPage.selectChapter` so a manual pick never inherits a pending autoplay (`onEnded` re-arms it after the call).
 - Tests: speed/play state on source change and cancelled autoplay (RED then GREEN); rAF loop cancelled on pause and unmount, and "Volver al audio" jumping to the active sentence's page (coverage, green on first run).
 - Scoped vitest 64/64 (one unreproduced failure of "loads the index and the first available chapter" in the first run, then 8 green runs); `tsc` clean; build OK.
+
+## F3c: Appearance + re-anchor (item 1 only)
+
+Mode: Strict TDD. Tasks 3c.1 and 3c.2 complete. Item 2 (F3a follow-ups) NOT done: the diff already exceeded the ~500-line stop (587 insertions / 16 deletions in code and tests, before docs).
+
+### Files
+- New: `reader/appearance.ts` (reducer, storage `reader.appearance.v1`, validation), `ReaderAppearanceContext.tsx`, `AppearancePanel.tsx`, `useReanchor.ts`; tests `__tests__/appearance.test.tsx`, `__tests__/reanchor.test.tsx`.
+- Modified: `ReaderPage.tsx` (provider wrapper, `data-theme`, `--reader-font-size`, fonts.ready tick, `useReanchor`), `PaginatedChapter.tsx` and `usePagination.ts` (`relayoutKey`), `ReaderToolbar.tsx` (panel), `useAudioSync.ts` (`entryPages` exported), `reader.css` (theme variables, panel).
+
+### Design notes
+- `ReaderPage` now wraps its view in `ReaderAppearanceProvider`, so `App.tsx` is untouched.
+- `useReanchor` records the first visible entry on every page change; when stride, ppv, count or `relayoutKey` (font step, fonts.ready) changes it moves to the page of the active entry (following during playback) or of the recorded entry. Width changes arrive through the existing `ResizeObserver` in `usePagination`. A theme change is not a relayout trigger.
+- Font sizes: 0.9, 1, 1.125 (default), 1.25, 1.5, 1.75 rem. Invalid stored fields fall back to their defaults independently.
+
+### TDD evidence
+| Task | RED | GREEN |
+|------|-----|-------|
+| 3c.1/3c.2 | `appearance.test.tsx` suite failed (modules missing); 6 `reanchor.test.tsx` tests failed (no "Apariencia" control) | scoped run 84/84 (11 files) |
+
+`tsc --noEmit` clean; `npm run build` OK.
+
+### Open / not done
+- Item 2 pending: page buttons disabled at the bounds, `aria-live="polite"` on the page indicator, tests for stale chapter fetch and ResizeObserver recalculation (the latter is partly covered by the resize re-anchor test).
+- Real-browser check of column rects, spread switch at 1100 px and web-font reflow not performed.
+
+## F3c verify follow-up
+
+- `useReanchor`: a re-anchor now keeps the anchored entry (no overwrite with the spread's first entry, so repeated relayouts do not drift back); a null anchor falls back to the last non-null one within the same chapter.
+- `ReaderPage`: loading and unavailable shells carry `data-theme` and `--reader-font-size`.
+- `reanchor.test.tsx`: `document.fonts` stub is restored in `afterEach`; new tests for drift, null-anchor fallback and shell theme (RED first for all three).

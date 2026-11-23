@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../../shared/api/client";
 import type { ReaderChapterDto, ReaderIndexDto } from "../../shared/api/types";
@@ -7,11 +7,14 @@ import { PageIndicator } from "./PageIndicator";
 import { PaginatedChapter } from "./PaginatedChapter";
 import { ReaderToc } from "./ReaderToc";
 import { ReaderToolbar } from "./ReaderToolbar";
-import { flattenEntries } from "./entries";
+import { FONT_SIZES_REM } from "./appearance";
+import { ReaderAppearanceProvider, useReaderAppearance } from "./ReaderAppearanceContext";
+import { entryAtMs, flattenEntries } from "./entries";
 import { clampPage, spreadStart } from "./pagination";
 import { SPEED_STEP, bookPercent } from "./sync";
 import { useAudioSync } from "./useAudioSync";
 import { useAutoFollow } from "./useAutoFollow";
+import { useReanchor } from "./useReanchor";
 import "./reader.css";
 
 const RECONVERT_HINT = "Reconvierte el libro para habilitar el lector";
@@ -23,6 +26,14 @@ type ChapterState =
   | { status: "ready"; chapter: ReaderChapterDto };
 
 export function ReaderPage() {
+  return (
+    <ReaderAppearanceProvider>
+      <ReaderView />
+    </ReaderAppearanceProvider>
+  );
+}
+
+function ReaderView() {
   const { id = "" } = useParams();
   const [indexState, setIndexState] = useState<IndexState>({ status: "loading" });
   const [current, setCurrent] = useState<number | null>(null);
@@ -33,6 +44,8 @@ export function ReaderPage() {
   const [audio] = useState(() => new Audio());
   const contentRef = useRef<HTMLDivElement>(null);
   const follow = useAutoFollow();
+  const { theme, fontStep } = useReaderAppearance();
+  const [fontsTick, setFontsTick] = useState(0);
 
   const chapters = indexState.status === "ready" ? indexState.index.chapters : [];
   const chapter = chapterState.status === "ready" ? chapterState.chapter : null;
@@ -69,6 +82,28 @@ export function ReaderPage() {
     },
   });
 
+  // Web fonts change glyph widths once loaded, which reflows the columns.
+  useEffect(() => {
+    let cancelled = false;
+    void document.fonts?.ready.then(() => !cancelled && setFontsTick((t) => t + 1));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const relayoutKey = `${fontStep}:${fontsTick}`;
+  useReanchor({
+    contentRef,
+    chapterKey: chapter,
+    page,
+    ppv: layout.ppv,
+    stride: layout.stride,
+    count: layout.count,
+    relayoutKey,
+    followedEntry: () => (sync.playing && follow.following ? entryAtMs(entries, audio.currentTime * 1000) : -1),
+    onPage: setPage,
+  });
+
   useEffect(() => {
     let cancelled = false;
     api
@@ -98,10 +133,17 @@ export function ReaderPage() {
     };
   }, [id, current]);
 
-  if (indexState.status === "loading") return <div className="reader-shell">Cargando…</div>;
+  const shellStyle = { "--reader-font-size": `${FONT_SIZES_REM[fontStep]}rem` } as CSSProperties;
+  if (indexState.status === "loading") {
+    return (
+      <div className="reader-shell" data-theme={theme} style={shellStyle}>
+        Cargando…
+      </div>
+    );
+  }
   if (indexState.status === "unavailable") {
     return (
-      <div className="reader-shell reader-error">
+      <div className="reader-shell reader-error" data-theme={theme} style={shellStyle}>
         <p>{RECONVERT_HINT}</p>
         <Link to="/biblioteca">Volver a la biblioteca</Link>
       </div>
@@ -127,7 +169,7 @@ export function ReaderPage() {
   const pageReady = chapterState.status === "ready";
 
   return (
-    <div className="reader-shell">
+    <div className="reader-shell" data-theme={theme} style={shellStyle}>
       <header className="reader-bar">
         <Link to="/biblioteca">Biblioteca</Link>
         <strong>{index.title}</strong>
@@ -143,6 +185,7 @@ export function ReaderPage() {
             contentRef={contentRef}
             onLayout={onLayout}
             onEntryClick={entryClick}
+            relayoutKey={relayoutKey}
             cover={position === 0 && index.hasCover ? <CoverPage bookId={id} title={index.title} /> : null}
           />
         )}
