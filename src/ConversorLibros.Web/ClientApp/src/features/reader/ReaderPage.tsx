@@ -210,11 +210,15 @@ function ReaderView() {
         <button type="button" disabled={prevChapter === undefined} onClick={() => selectChapter(prevChapter)}>
           Capítulo anterior
         </button>
-        <button type="button" disabled={!pageReady} onClick={() => manualGo(start - layout.ppv)}>
+        <button type="button" disabled={!pageReady || start === 0} onClick={() => manualGo(start - layout.ppv)}>
           Página anterior
         </button>
         <PageIndicator page={shown} count={layout.count} ppv={layout.ppv} />
-        <button type="button" disabled={!pageReady} onClick={() => manualGo(start + layout.ppv)}>
+        <button
+          type="button"
+          disabled={!pageReady || start + layout.ppv >= layout.count}
+          onClick={() => manualGo(start + layout.ppv)}
+        >
           Página siguiente
         </button>
         <button type="button" disabled={nextChapter === undefined} onClick={() => selectChapter(nextChapter)}>

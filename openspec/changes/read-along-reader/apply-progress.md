@@ -196,3 +196,25 @@ Mode: Strict TDD. Tasks 3c.1 and 3c.2 complete. Item 2 (F3a follow-ups) NOT done
 - `useReanchor`: a re-anchor now keeps the anchored entry (no overwrite with the spread's first entry, so repeated relayouts do not drift back); a null anchor falls back to the last non-null one within the same chapter.
 - `ReaderPage`: loading and unavailable shells carry `data-theme` and `--reader-font-size`.
 - `reanchor.test.tsx`: `document.fonts` stub is restored in `afterEach`; new tests for drift, null-anchor fallback and shell theme (RED first for all three).
+
+## F3d: Follow-ups
+
+Mode: Strict TDD. Tasks 3d.1 and 3d.2 complete; all six items done (about 205 changed lines including docs).
+
+- Item 1: page buttons are disabled at the bounds of the current chapter (first page / last spread). Page navigation never crossed chapters (chapter buttons do that and were already disabled at the book ends), so the bound is per chapter.
+- Item 2: `aria-live="polite"` on the page indicator.
+- Item 3: the chapter effect already ignores stale responses through its `cancelled` flag; test added, no code change.
+- Item 4: `usePagination` already recalculated on `ResizeObserver`; test added, no code change.
+- Item 5: `firstVisibleEntry` in `useReanchor` now returns the last entry starting before the spread when the spread starts none, instead of the previous anchor (still falls back to it when there is none, e.g. the cover).
+- Item 6: `AppearancePanel`: Escape closes and refocuses the toggle, `aria-controls` (via `useId`), focus moves to the counterpart font button when one reaches a bound, and an `<output aria-live="polite">` shows "Tamaño del texto: N px" (rem x 16).
+
+### TDD evidence
+| Item | Result |
+|------|--------|
+| 1, 2, 5, 6 | RED first (7 failing tests) |
+| 3, 4 | passed immediately (pure coverage) |
+
+Scoped run (reader, library, app): 97/97; `tsc --noEmit` clean; `npm run build` OK.
+
+### Not done
+- Focus is not managed when a page button becomes disabled at a bound (only the font buttons were requested).

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -153,6 +153,74 @@ describe("ReaderPage", () => {
     await user.click(screen.getByRole("button", { name: "Página siguiente" }));
     await user.click(screen.getByRole("button", { name: "Página siguiente" }));
     expect(screen.getByText(/página 3 de 3/i)).toBeInTheDocument();
+  });
+
+  it("disables the page buttons at the chapter bounds", async () => {
+    const user = userEvent.setup();
+    stubFetch(index(), { 1: chapter(1, "Uno"), 3: chapter(3, "Tres") });
+    renderReader();
+    await screen.findByText("Texto Uno.");
+    const prev = screen.getByRole("button", { name: "Página anterior" });
+    const next = screen.getByRole("button", { name: "Página siguiente" });
+
+    expect(prev).toBeDisabled();
+    expect(next).toBeEnabled();
+    await user.click(next);
+    expect(prev).toBeEnabled();
+    await user.click(next);
+    expect(next).toBeDisabled();
+    expect(prev).toBeEnabled();
+  });
+
+  it("announces the page indicator politely", async () => {
+    stubFetch(index(), { 1: chapter(1, "Uno") });
+    renderReader();
+    expect(await screen.findByText(/página 1 de 3/i)).toHaveAttribute("aria-live", "polite");
+  });
+
+  it("ignores a chapter response that arrives after another chapter was selected", async () => {
+    const user = userEvent.setup();
+    let resolveOne!: (r: unknown) => void;
+    const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (/chapters\/1$/.test(url)) return new Promise((r) => (resolveOne = r));
+        return Promise.resolve(ok(/chapters\/3$/.test(url) ? chapter(3, "Tres") : index()));
+      })
+    );
+    renderReader();
+    await user.click(await screen.findByRole("button", { name: "Tres" }));
+    expect(await screen.findByText("Texto Tres.")).toBeInTheDocument();
+
+    await act(async () => resolveOne(ok(chapter(1, "Uno"))));
+
+    expect(screen.getByText("Texto Tres.")).toBeInTheDocument();
+    expect(screen.queryByText("Texto Uno.")).not.toBeInTheDocument();
+  });
+
+  it("recalculates the page count when the viewport is resized", async () => {
+    const callbacks: Array<() => void> = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: () => void) {
+          callbacks.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+      }
+    );
+    stubFetch(index(), { 1: chapter(1, "Uno") });
+    renderReader();
+    expect(await screen.findByText(/página 1 de 3/i)).toBeInTheDocument();
+
+    // 800 px viewport, 4 single pages: 4 * (800 + 48) - 48.
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", { configurable: true, get: () => 800 });
+    Object.defineProperty(HTMLElement.prototype, "scrollWidth", { configurable: true, get: () => 3344 });
+    act(() => callbacks.forEach((cb) => cb()));
+
+    expect(await screen.findByText(/página 1 de 4/i)).toBeInTheDocument();
   });
 
   it("shows an error for a chapter that cannot be loaded and keeps the TOC usable", async () => {

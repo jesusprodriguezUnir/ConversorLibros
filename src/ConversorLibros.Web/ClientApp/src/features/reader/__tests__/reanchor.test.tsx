@@ -28,7 +28,7 @@ const indexBody = {
 };
 
 /** Fake layout: entry n sits on page floor(n * factor); the page stride follows the viewport width. */
-const model = { width: 1000, factor: 1 };
+const model = { width: 1000, factor: 1, spans: {} as Record<number, number[]> };
 const stride = () => {
   const ppv = model.width >= 1100 ? 2 : 1;
   return Math.floor((model.width - 48 * (ppv - 1)) / ppv) + 48;
@@ -52,6 +52,7 @@ describe("ReaderPage re-anchoring", () => {
   beforeEach(() => {
     model.width = 1000;
     model.factor = 1;
+    model.spans = {};
     roCallbacks = [];
     localStorage.clear();
     audio = new FakeAudio();
@@ -75,7 +76,9 @@ describe("ReaderPage re-anchoring", () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ left: 0 } as DOMRect);
     vi.spyOn(HTMLElement.prototype, "getClientRects").mockImplementation(function (this: HTMLElement) {
       if (this.dataset.entry === undefined) return [] as unknown as DOMRectList;
-      return [{ left: Math.floor(Number(this.dataset.entry) * model.factor) * stride() }] as unknown as DOMRectList;
+      const n = Number(this.dataset.entry);
+      const pages = model.spans[n] ?? [Math.floor(n * model.factor)];
+      return pages.map((p) => ({ left: p * stride() })) as unknown as DOMRectList;
     });
   });
   afterEach(() => {
@@ -192,9 +195,23 @@ describe("ReaderPage re-anchoring", () => {
     expect(screen.getByText(/página 2 de 7/i)).toBeInTheDocument();
 
     model.factor = 1;
+    model.spans = {};
     await increaseFont(user);
 
     expect(screen.getByText(/página 1 de 4/i)).toBeInTheDocument();
+  });
+
+  it("anchors to the sentence spanning into a page that starts none", async () => {
+    model.spans = { 0: [0], 1: [0], 2: [0], 3: [0, 1, 2] }; // entry 3 runs over pages 0-2
+    const user = await open();
+    await user.click(screen.getByRole("button", { name: "+15 s" })); // seeks to the end of entry 3 -> page 2
+    expect(screen.getByText(/página 3 de 4/i)).toBeInTheDocument();
+
+    model.spans = {};
+    model.factor = 2; // entry 3 now starts on page 6 of 7; entry 0 would send the reader back to page 1
+    await increaseFont(user);
+
+    expect(screen.getByText(/página 7 de 7/i)).toBeInTheDocument();
   });
 
   it.each([

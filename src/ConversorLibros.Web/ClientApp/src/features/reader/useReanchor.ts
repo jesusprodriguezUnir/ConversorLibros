@@ -17,16 +17,21 @@ interface Options {
   onPage: (page: number) => void;
 }
 
-/** First entry that starts on the current spread; null when the spread holds none (e.g. the cover). */
+/**
+ * First entry that starts on the current spread. When the spread starts none, the entry that spans into it (the last
+ * one starting before it); null when there is none either (e.g. the cover).
+ */
 function firstVisibleEntry(content: HTMLElement, page: number, ppv: number, stride: number): number | null {
   const first = page - (page % ppv);
+  let spanning: number | null = null;
   for (const el of content.querySelectorAll<HTMLElement>("[data-entry]")) {
     const index = Number(el.dataset.entry);
     const [start] = entryPages(content, index, stride);
-    if (start === undefined || start < first) continue;
-    return start < first + ppv ? index : null;
+    if (start === undefined) continue;
+    if (start < first) spanning = index;
+    else return start < first + ppv ? index : spanning;
   }
-  return null;
+  return spanning;
 }
 
 /**

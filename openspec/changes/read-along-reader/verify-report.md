@@ -290,3 +290,28 @@ SUGGESTION:
 4. reader.css - links/buttons in the toolbar and TOC inherit UA colours rather than the theme variables; fine with `color-scheme: dark` but not explicitly themed.
 
 ### F3c verdict: PASS WITH WARNINGS
+
+
+## F3d - a11y polish and coverage (tasks 3d.1, 3d.2) - branch feat/read-along-reader-f3d, uncommitted
+
+Runs (ClientApp): `vitest run src/features/reader src/features/library src/app` - 11 files, 97 tests passed. `tsc --noEmit -p .` - clean.
+
+Per item:
+1. Page buttons disabled at chapter bounds (ReaderPage.tsx:213,218-221): `start === 0` / `start + ppv >= count`, spread-aware (uses spreadStart). Test (ReaderPage.test.tsx "disables the page buttons at the chapter bounds") exercises real clicks and fails if the conditions break. Chapter crossing via chapter buttons is the accepted deviation. OK.
+2. `aria-live="polite"` on indicator (PageIndicator.tsx:5). Test asserts the attribute on the rendered text. OK.
+3. Stale chapter fetch (coverage only): test holds chapter 1 pending, selects 3, resolves 1 late, asserts 3 stays. Genuinely exercises the guard. OK.
+4. ResizeObserver (coverage only): test invokes captured RO callbacks after changing client/scrollWidth, expects count 3 -> 4. Fails if the observer is not wired. Prototype overrides are cleaned in afterEach. OK.
+5. useReanchor spanning logic (useReanchor.ts:20-35): correct. Entries are iterated in DOM order; last entry with start < spread first is kept as `spanning`; first entry starting at/after `first` returns itself if inside the spread, else the spanning one; none-started returns null (cover -> previous anchor fallback preserved); no start after the loop returns spanning. Double-page spreads use `first + ppv`, no off-by-one found. Test (reanchor.test.tsx "anchors to the sentence spanning...") uses a multi-page entry and verifies the result differs from the fallback (entry 0 would give page 1, expected page 7). Chapter-change case is not covered by a dedicated test, but anchor state is per-chapter in existing tests.
+6. AppearancePanel a11y: Escape/focus return, aria-expanded/aria-controls (useId), focus hand-off at bounds, `<output aria-live>` - each has a behavior test using real user events (Escape is pressed with focus inside the panel). Hand-off logic (AppearancePanel.tsx:22-26) is correct for both bounds.
+
+Findings
+- CRITICAL: none.
+- WARNING: none.
+- SUGGESTION: ReaderPage.tsx:213,218 - disabling the focused page button at a bound drops keyboard focus (known/accepted note). Could mirror the font-button hand-off.
+- SUGGESTION: AppearancePanel.tsx:19-21 - Escape is handled on the wrapper `onKeyDown`, so it only fires with focus inside the panel/toggle (no global listener, no cleanup issue, does not hijack Escape elsewhere). Consequence: with the panel open and focus elsewhere, Escape does not close it; no outside-click close either.
+- SUGGESTION: AppearancePanel.tsx:23-25 - the hand-off condition `next <= 0 || next >= MAX_STEP` includes a dead branch per direction; harmless.
+- SUGGESTION: reanchor test covers a single spanning scenario; no test for double-page (ppv=2) spanning or chapter change.
+
+No regressions of F3a/F3b/F3c observed (full reader suite green).
+
+### F3d verdict: PASS

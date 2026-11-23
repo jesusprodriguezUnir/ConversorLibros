@@ -84,6 +84,11 @@ Constraints for all slices: no Core constructor changes (only the optional trail
 - [x] 3c.1 RED: appearance reducer/storage tests (`reader.appearance.v1`), re-anchor by entry on resize/font change/theme change during playback. Scenarios: Resize keeps position; Change theme during playback; Font size change.
 - [x] 3c.2 GREEN: `ReaderAppearanceContext`, `AppearancePanel`, `[data-theme]` CSS variables, `ResizeObserver` and `document.fonts.ready` re-anchor.
 
+## F3d: Follow-ups (spec: reader-ui)
+
+- [x] 3d.1 RED: page buttons disabled at the chapter bounds; `aria-live="polite"` on the page indicator; stale chapter fetch ignored; ResizeObserver recalculates the page count; re-anchor to the sentence spanning into a page with no sentence start; AppearancePanel a11y (Escape closes and refocuses the toggle, `aria-controls`, focus moves when a font button hits a bound, font size announced).
+- [x] 3d.2 GREEN: `ReaderPage`, `PageIndicator`, `useReanchor`, `AppearancePanel` changes for the items above.
+
 ## F4: Resume + bookmarks (spec: reader-progress-bookmarks)
 
 - [ ] 4.1 RED: `useReaderProgress.test.tsx` (fake timers): PUT on pause, chapter change, every 10 s, keepalive on hide; no saved position → chapter 0; resume loads paused; ms clamped to chapter end; removed chapter falls back to 0; save failure non-blocking. Scenarios: Resume after reload; No saved position; Layout independence; Position beyond chapter end; Saved chapter no longer available; Save failure.
