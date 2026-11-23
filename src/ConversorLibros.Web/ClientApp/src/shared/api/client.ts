@@ -62,6 +62,10 @@ export const api = {
     return parseJson<ReaderChapterDto>(res);
   },
 
+  readerAudioUrl(id: string, index: number): string {
+    return `/api/library/${encodeURIComponent(id)}/chapters/${index}/audio`;
+  },
+
   async openLibraryItem(id: string): Promise<void> {
     const res = await fetch(`/api/library/${encodeURIComponent(id)}/open`, {
       method: "POST",

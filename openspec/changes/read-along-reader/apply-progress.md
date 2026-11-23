@@ -135,3 +135,34 @@ Scoped run `npx vitest run src/features/reader src/features/library src/app` -> 
 - `ReaderToc` collapses each run of missing indexes into one disabled entry ("Capítulo N" or "Capítulos N–M"), so the list is bounded by the indexed chapter count.
 - Tests (RED then GREEN): loading status, sparse TOC (1 and 5000 → 3 entries), null title. Scoped `vitest run src/features/reader src/features/library src/app` → 30/30; `tsc --noEmit` clean.
 - Deferred to F3c: suggestion 2 (bound-disabled page buttons, `aria-live` indicator) and 3 (stale-fetch race and ResizeObserver tests).
+
+## F3b: Audio sync + follow
+
+Mode: Strict TDD. Tasks 3b.1-3b.5 complete.
+
+### Files
+- New: `reader/sync.ts`, `useAudioSync.ts`, `useAutoFollow.ts`, `AudioControls.tsx`, `BackToAudioButton.tsx`, `ReaderToolbar.tsx`; tests `sync.test.ts`, `useAudioSync.test.tsx`, `useAutoFollow.test.tsx`, `fakeAudio.ts` (shared fake).
+- Modified: `ReaderPage.tsx` (hooks, toolbar, manual-navigation suspend, click-to-seek), `PaginatedChapter.tsx` (`contentRef`, `onEntryClick`, `stride` in `onLayout`), `reader.css`, `shared/api/client.ts` (`readerAudioUrl` -> `/api/library/{id}/chapters/{n}/audio`).
+
+### TDD evidence
+| Task | RED | GREEN |
+|------|-----|-------|
+| 3b.1/3b.2 | `sync.test.ts` failed: `../sync` unresolved | 16/16 |
+| 3b.3/3b.4 | `useAudioSync.test.tsx`, `useAutoFollow.test.tsx` failed: hook modules unresolved | 9 hook tests + 6 follow/integration tests green |
+| 3b.5 | (implementation) | scoped run 61/61 (9 files), `tsc --noEmit` clean, `npm run build` OK, no build artifacts in `git status` |
+
+### Deviations / notes
+- `pageTurnFraction` is implemented as `pageAtProgress(rectPages, progress)`: it returns the page of the line reached by the progress, which is the same rule (turn when progress reaches the share of lines on the visible spread) without a snap-back when the spread changes.
+- `findActiveEntry` is an alias of `entryAtMs` (already a binary search).
+- Skip past the chapter end clamps at the end (no jump to the next chapter). Chapter end auto-advances and autoplays.
+- Speed uses "Más lenta"/"Más rápida" buttons (0.25 step, clamped 0.75-2).
+- Whole-book percent in the toolbar refreshes about once per second (`timeupdate`, whole seconds).
+- Size: ~795 added/changed lines in code and tests (plus docs), over the 600 hard stop; F3b was not split because the work was already complete when measured.
+- Not done: real-browser check of column rects and page turns; F3c (appearance, aria-live, bound-disabled buttons) and F4.
+- F3b accepted as `size:exception` by the user (2026-11-23): ~855 changed lines (incl. tests and docs) vs 600 hard stop; split into F3b-1/F3b-2 declined.
+
+### F3b verify follow-up (warnings 1-3, pending autoplay)
+- `FakeAudio.src` now mirrors the media load algorithm (rate back to default, paused without `pause`, position 0).
+- `useAudioSync` re-applies the chosen speed and resets `playing`/`positionMs` after every source change; new `cancelAutoplay()`, called by `ReaderPage.selectChapter` so a manual pick never inherits a pending autoplay (`onEnded` re-arms it after the call).
+- Tests: speed/play state on source change and cancelled autoplay (RED then GREEN); rAF loop cancelled on pause and unmount, and "Volver al audio" jumping to the active sentence's page (coverage, green on first run).
+- Scoped vitest 64/64 (one unreproduced failure of "loads the index and the first available chapter" in the first run, then 8 green runs); `tsc` clean; build OK.

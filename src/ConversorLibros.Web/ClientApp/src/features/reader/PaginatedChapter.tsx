@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type MouseEvent, type ReactNode, type RefObject } from "react";
 import type { ReaderChapterDto } from "../../shared/api/types";
 import { flattenEntries, type ReaderEntry } from "./entries";
 import { COLUMN_GAP, usePagination } from "./usePagination";
@@ -8,15 +8,22 @@ interface Props {
   chapter: ReaderChapterDto;
   cover: ReactNode;
   page: number;
-  onLayout: (layout: { count: number; ppv: 1 | 2 }) => void;
+  contentRef: RefObject<HTMLDivElement | null>;
+  onLayout: (layout: { count: number; ppv: 1 | 2; stride: number }) => void;
+  onEntryClick: (entryIndex: number) => void;
 }
 
-export function PaginatedChapter({ chapter, cover, page, onLayout }: Props) {
+export function PaginatedChapter({ chapter, cover, page, contentRef, onLayout, onEntryClick }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const { ppv, metrics, count } = usePagination(viewportRef, contentRef, chapter);
+  const { stride } = metrics;
 
-  useEffect(() => onLayout({ count, ppv }), [count, ppv, onLayout]);
+  useEffect(() => onLayout({ count, ppv, stride }), [count, ppv, stride, onLayout]);
+
+  const handleClick = (event: MouseEvent<HTMLElement>) => {
+    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-entry]");
+    if (target) onEntryClick(Number(target.dataset.entry));
+  };
 
   const paragraphs = useMemo(() => {
     const groups: ReaderEntry[][] = [];
@@ -30,6 +37,7 @@ export function PaginatedChapter({ chapter, cover, page, onLayout }: Props) {
         ref={contentRef}
         data-testid="chapter-content"
         className="reader-content"
+        onClick={handleClick}
         style={{
           width: metrics.contentWidth,
           columnWidth: metrics.colW,

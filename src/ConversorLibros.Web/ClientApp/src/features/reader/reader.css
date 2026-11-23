@@ -1,8 +1,8 @@
 .reader-shell {
   display: grid;
   grid-template-columns: 16rem 1fr;
-  grid-template-rows: auto 1fr auto;
-  grid-template-areas: "bar bar" "toc main" "toc controls";
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas: "bar bar" "toc main" "toc audio" "toc controls";
   height: 100vh;
   background: #f7f4ee;
   color: #222;
@@ -68,6 +68,27 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+.reader-toolbar {
+  grid-area: audio;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid #0002;
+}
+.reader-audio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.reader-content [data-entry] {
+  cursor: pointer;
+}
+.reader-content .reader-active {
+  background: #ffd54f88;
+  border-radius: 0.2em;
 }
 .reader-controls {
   grid-area: controls;

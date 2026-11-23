@@ -196,3 +196,60 @@ SUGGESTION:
 5. ReaderToc.tsx:14 - fills every index between min and max; a pathological sparse index (e.g. 1 and 5000) renders thousands of disabled buttons; cap or collapse gaps.
 
 ### F3a verdict: PASS
+
+## F3b verification (audio sync + follow, tasks 3b.1-3b.5) - branch feat/read-along-reader-f3b, uncommitted
+
+Mode: Strict TDD. Tasks 3b.1-3b.5 all `[x]`. Scope respected: no appearance, spread toggles, aria-live, bound-disabled page buttons (F3c) and no progress PUT or bookmarks (F4). No new dependencies.
+
+### Runtime evidence (from src/ConversorLibros.Web/ClientApp)
+- `npx vitest run src/features/reader src/features/library src/app` -> 9 files, 61 tests passed, 0 failed (act() warnings on stderr only).
+- `npx tsc --noEmit -p .` -> clean, no output.
+- `npm run build` -> OK (1676 modules, built in 1.7s). `git status --short` afterwards: identical to before the build; wwwroot is git-ignored.
+
+### Spec compliance (11 F3b scenarios)
+| Scenario | Test | Status |
+|---|---|---|
+| Highlight follows audio | useAudioSync.test.tsx:88-100 (entry 1 at 1.2 s, back to 0 at 0.5 s, exactly one `.reader-active`); sync.test.ts:14-27 | COVERED |
+| Paragraph fallback | useAudioSync.test.tsx:102-110 (single whole-range entry); entries.test.ts covers paragraph-mode flattening | COVERED |
+| Sentence spanning two pages | useAudioSync.test.tsx:112-129 (lines on pages 3,3,4,4: turns to 3, stays at 33 %, turns to 4 at 53 %); sync.test.ts:29-42. Highlight on all fragments holds because one span carries the class | COVERED |
+| Chapter ends | useAudioSync.test.tsx:143-160 (next src autoplays; no next: no play). ReaderPage `onEnded` -> `selectChapter` wiring is not exercised | COVERED (hook level) |
+| Click to seek | useAudioSync.test.tsx:162-168 (paused, currentTime 2.5, entry 2 active); useAutoFollow.test.tsx:115-124 (UI click, 1.5 s, highlighted) | COVERED |
+| Suspend | useAutoFollow.test.tsx:86-97 (button appears, audio not paused); no auto-turn while suspended: useAudioSync.test.tsx:131-141 | COVERED |
+| Resume follow | useAutoFollow.test.tsx:106-113 asserts only that the button disappears; the jump to the active entry's page (`syncNow`) is not asserted at page level (jsdom has no rects). Tick page-turn logic itself is covered at useAudioSync.test.tsx:112-129 | PARTIAL |
+| Click-to-seek resumes follow | useAutoFollow.test.tsx:115-124 | COVERED |
+| Skip bounds | sync.test.ts:44-48; useAudioSync.test.tsx:186-192 (5 s, -15 -> 0; +15 clamps at 4 s duration); useAutoFollow.test.tsx:126-132 | COVERED |
+| Speed range | sync.test.ts:50-56; useAudioSync.test.tsx:194-197 (clamps to 2 and 0.75); useAutoFollow.test.tsx:134-135 (1.25) | COVERED |
+| Audio load error | useAudioSync.test.tsx:170-184 (error event and rejected play(), text kept); useAutoFollow.test.tsx:137-139 (role=alert, text still rendered). A real 404 is simulated by the `error` event | COVERED |
+
+Coverage: 10/11 fully, 11/11 including the partial.
+
+### Backend contract
+`api.readerAudioUrl` -> `/api/library/{id}/chapters/{n}/audio` matches ReaderEndpoints.cs:58, which serves with `enableRangeProcessing: true` (line 73). Seeking therefore works against the real endpoint.
+
+### Declared deviations judged
+- `pageTurnFraction` as `pageAtProgress(rectPages, progress)`: ACCEPTED. Same behaviour as the spec (page of first rect, turn when progress reaches the share of lines on the next page); tested.
+- `findActiveEntry = entryAtMs`: ACCEPTED, binary search, already covered.
+- Skip +15 s clamps at the end and the end auto-advances: ACCEPTED, spec allows clamp or next chapter.
+- Speed buttons, step 0.25, 0.75-2: ACCEPTED.
+- Book percent refreshed ~1 s (timeupdate floored to seconds): ACCEPTED.
+
+### Correctness review
+- rAF loop starts on `playing` and is cancelled by the effect cleanup (pause, unmount, dependency change). Listeners are removed in cleanup and the audio is paused on unmount. Highlight uses `classList.toggle` on `[data-entry]`; there is no per-entry React state. `followingRef` is updated synchronously, so click-to-seek followed by `tick` sees follow=true. Follow suspends only in `manualGo` while playing; `selectChapter` resumes it. Spec-compliant.
+- A new chapter swaps `audio.src` and resets `activeRef`; the old DOM is replaced, so no stale highlight stays. Chapter fetch has its own `cancelled` guard.
+
+### Issues
+CRITICAL: none.
+
+WARNING:
+1. useAudioSync.ts:72-81 - changing `audio.src` runs the HTML media load algorithm, which (a) resets `playbackRate` to `defaultPlaybackRate` while the `speed` state stays (the effect at :119 does not re-run), so a chosen speed is lost on every chapter change including auto-advance; and (b) sets `paused = true` without a `pause` event, so after a manual chapter change while playing `playing` stays true (label "Pausa", rAF keeps running) with no sound. FakeAudio does not model either, so no test catches it. Fix: in the src effect re-apply `audio.playbackRate = speed`, and `setPlaying(false)` plus reset `positionMs` when not autoplaying.
+2. useAutoFollow.test.tsx:106-113 - "Resume follow" does not assert the page jump to the active entry (spec THEN clause); add a test with mocked client rects at ReaderPage level or a `syncNow` assertion in the hook test.
+3. useAudioSync.test.tsx:77 - `cancelAnimationFrame` is a no-op stub and nothing asserts that the loop stops after pause/unmount; add a test that no frame callbacks remain pending after `pause`.
+
+SUGGESTION:
+1. useAudioSync.ts:61 - `entryPages` runs `querySelector` + `getClientRects` (forced layout) every frame while following; cache per active index until layout/stride changes.
+2. useAudioSync.ts:77 / ReaderPage.tsx:63-67 - `autoplayRef` stays true if the next chapter fails to load (src stays null), so a later manual chapter pick autoplays unexpectedly; clear it on error or on manual selection.
+3. ReaderPage.tsx:54 - for one render after `selectChapter` the new `src` is paired with the old chapter's entries (`chapterState` is set to loading in an effect); derive `src` from the chapter whose `chapterIndex === current`.
+4. useAudioSync.ts:102-105 - on unmount the element keeps its `src` (possible buffering); set `audio.removeAttribute("src")` / `load()`.
+5. ReaderPage `onEnded` wiring (next chapter selection + autoplay) has no page-level test.
+
+### F3b verdict: PASS WITH WARNINGS
