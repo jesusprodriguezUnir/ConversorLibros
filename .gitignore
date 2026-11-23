@@ -11,6 +11,9 @@ obj/
 *.bin
 *.safetensors
 models/
+# C# source folders named Models (case-insensitive match on Windows) must stay tracked
+!src/ConversorLibros.Core/Models/
+!src/ConversorLibros.Web/Models/
 
 # Audios y libros de prueba
 *.wav
