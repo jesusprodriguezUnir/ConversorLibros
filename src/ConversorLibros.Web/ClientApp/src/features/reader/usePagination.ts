@@ -13,7 +13,8 @@ export interface PaginationState {
 export function usePagination(
   viewportRef: RefObject<HTMLElement | null>,
   contentRef: RefObject<HTMLElement | null>,
-  contentKey: unknown
+  contentKey: unknown,
+  relayoutKey = ""
 ): PaginationState {
   const [width, setWidth] = useState(0);
   const [count, setCount] = useState(1);
@@ -34,7 +35,7 @@ export function usePagination(
   useLayoutEffect(() => {
     const content = contentRef.current;
     if (content) setCount(pageCount(content.scrollWidth, metrics, COLUMN_GAP));
-  }, [contentRef, contentKey, metrics.colW]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [contentRef, contentKey, relayoutKey, metrics.colW]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { ppv, metrics, count };
 }

@@ -11,11 +11,13 @@ interface Props {
   contentRef: RefObject<HTMLDivElement | null>;
   onLayout: (layout: { count: number; ppv: 1 | 2; stride: number }) => void;
   onEntryClick: (entryIndex: number) => void;
+  /** Changes when the text reflows for a reason other than the viewport width (font size, web fonts). */
+  relayoutKey: string;
 }
 
-export function PaginatedChapter({ chapter, cover, page, contentRef, onLayout, onEntryClick }: Props) {
+export function PaginatedChapter({ chapter, cover, page, contentRef, onLayout, onEntryClick, relayoutKey }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const { ppv, metrics, count } = usePagination(viewportRef, contentRef, chapter);
+  const { ppv, metrics, count } = usePagination(viewportRef, contentRef, chapter, relayoutKey);
   const { stride } = metrics;
 
   useEffect(() => onLayout({ count, ppv, stride }), [count, ppv, stride, onLayout]);

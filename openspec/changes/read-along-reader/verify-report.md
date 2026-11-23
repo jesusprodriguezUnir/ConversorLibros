@@ -253,3 +253,40 @@ SUGGESTION:
 5. ReaderPage `onEnded` wiring (next chapter selection + autoplay) has no page-level test.
 
 ### F3b verdict: PASS WITH WARNINGS
+
+
+## F3c - appearance (themes, font size) and re-anchoring
+
+Scope: tasks 3c.1, 3c.2 (working tree vs HEAD, branch `feat/read-along-reader-f3c`). Deferred F3a follow-ups excluded. Size (~613 insertions, above the 500-line target) is a known, accepted decision.
+
+### Results
+- `npx vitest run src/features/reader src/features/library src/app`: 11 files, 84 tests, all pass.
+- `npx tsc --noEmit -p .`: clean (no output).
+
+### Spec coverage
+- Resize keeps position: reanchor.test.tsx:146 (ResizeObserver callback, width 1200, spread, page by content). Covered.
+- Font size change: reanchor.test.tsx:108 (first visible entry), :119 (active entry while following), :132 (suspended follow uses first visible). Covered, behavior-first.
+- Change theme during playback: reanchor.test.tsx:173 (data-theme dark, no pause, one play, same page). Covered. Colours themselves are not assertable in jsdom; acceptable.
+- fonts.ready re-anchor: reanchor.test.tsx:157. Persistence/validation: appearance.test.tsx (14 tests). Panel bounds: appearance.test.tsx:127.
+
+### Correctness review
+- No effect loop: `onPage` changes `page`, which re-runs the layout effect with an unchanged signature, so it only re-records the anchor. A stale entry never crosses chapters (`anchor.chapter === chapterKey` guard; a new chapter first records, then the next geometry change re-anchors to its own entry 0).
+- fonts.ready: `cancelled` guard on unmount; ResizeObserver disconnect lives in usePagination.ts:32. Both clean.
+- Theme CSS: all reader surfaces switched to variables; sepia and dark contrast plausible (fg/bg roughly 7:1+ and 12:1+); `color-scheme: dark` covers native controls.
+
+### Findings
+CRITICAL: none.
+
+WARNING:
+1. ReaderPage.tsx:136,139 - loading and error shells render `.reader-shell` without `data-theme`/font style, so they use the light defaults. A dark-theme user gets a light flash while loading and a light error screen. Pass `data-theme={theme}` there too.
+2. useReanchor.ts:57 - anchor drift: after a re-anchor to page N (e.g. an odd page in a spread), the effect re-records `firstVisibleEntry` of the whole spread, which can be an earlier entry than the one just anchored. Each later relayout (font steps, resize across 1100 px) can move the position backward. Keep the anchor entry when the signature just changed and only refresh it on user-driven page changes.
+3. useReanchor.ts:50-56 - when the stored entry is null (spread without an entry start, e.g. one long entry or the cover) or `entryPages` returns nothing, the function returns without moving and without updating the anchor, so position is lost silently on relayout. Fall back to the last non-null anchor.
+4. reanchor.test.tsx:157-170 - `document.fonts` is deleted at the end of the test body, not in `afterEach`/finally, so a failing assertion leaks the stub into later tests.
+
+SUGGESTION:
+1. No test for chapter change followed by relayout (stale-anchor guard) or for unmounting before `fonts.ready` resolves; no test asserts `--reader-font-size` is applied to the shell (ReaderPage.tsx:163).
+2. AppearancePanel.tsx:13,17 - no Escape/outside-click close, no `aria-controls`, and no visible/announced current font size; focus is lost when a font button becomes disabled at a bound (:27,:30). The panel is `position:absolute; bottom:100%` (reader.css) and can clip on narrow toolbars.
+3. ReaderAppearanceContext.tsx:16 - writes defaults to localStorage on mount and does not sync across tabs (no `storage` listener); harmless.
+4. reader.css - links/buttons in the toolbar and TOC inherit UA colours rather than the theme variables; fine with `color-scheme: dark` but not explicitly themed.
+
+### F3c verdict: PASS WITH WARNINGS

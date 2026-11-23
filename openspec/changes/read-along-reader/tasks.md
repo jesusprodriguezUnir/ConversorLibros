@@ -81,8 +81,8 @@ Constraints for all slices: no Core constructor changes (only the optional trail
 
 ## F3c: Appearance + spread (spec: reader-ui)
 
-- [ ] 3c.1 RED: appearance reducer/storage tests (`reader.appearance.v1`), re-anchor by entry on resize/font change/theme change during playback. Scenarios: Resize keeps position; Change theme during playback; Font size change.
-- [ ] 3c.2 GREEN: `ReaderAppearanceContext`, `AppearancePanel`, `[data-theme]` CSS variables, `ResizeObserver` and `document.fonts.ready` re-anchor.
+- [x] 3c.1 RED: appearance reducer/storage tests (`reader.appearance.v1`), re-anchor by entry on resize/font change/theme change during playback. Scenarios: Resize keeps position; Change theme during playback; Font size change.
+- [x] 3c.2 GREEN: `ReaderAppearanceContext`, `AppearancePanel`, `[data-theme]` CSS variables, `ResizeObserver` and `document.fonts.ready` re-anchor.
 
 ## F4: Resume + bookmarks (spec: reader-progress-bookmarks)
 
