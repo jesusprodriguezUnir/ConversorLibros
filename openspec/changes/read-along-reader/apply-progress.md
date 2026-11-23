@@ -238,3 +238,19 @@ RED first: `useReaderProgress.test.tsx` failed on the missing module; `ReaderPag
 - The resume seek is re-applied once on `loadedmetadata` if the browser dropped it.
 - ReaderPage re-pages to the resumed entry while layout settles (and `useReanchor` follows it) so the page holding the saved sentence is shown while paused.
 - Tests added in `useReaderProgress.test.tsx` and `ReaderPageResume.test.tsx`. `ReaderPage.test.tsx` "loads the index ... cover" is intermittently flaky (also on the pre-change tree).
+
+## F4b (tasks 4.3-4.5)
+
+- API: `ReaderBookmarkDto`, `CreateReaderBookmarkRequest`; `api.getReaderBookmarks` / `addReaderBookmark` (POST, 201) / `deleteReaderBookmark` (DELETE, 204). The server truncates the excerpt to 160 chars and answers an empty list for a missing or corrupt file; adding for a chapter outside the index is a 400.
+- `useBookmarks`: loads the list on mount (any failure -> empty list), `add` (current chapter + audio ms + active sentence, sliced to 160), `remove`, `jump`. A same-chapter jump seeks directly (clamped to the chapter duration); a jump into another chapter stores a pending `{chapter, ms}`, opens the chapter through `selectChapter` and seeks once when it is ready (clamped, re-applied on `loadedmetadata`). A manual chapter change discards the pending jump. Jumps go through `resumeSeek` (so the page follows the audio) after `follow.resume()`.
+- `BookmarksPanel` (toggle with aria-expanded/aria-controls, Escape closes and refocuses, closes after a jump); bookmarks whose chapter is not in the index render as "Capítulo no disponible", jump disabled, delete still enabled. Wired through `ReaderToolbar` `bookmarks` prop.
+- Notes: the note field (PUT) is not exposed in the UI; `ReaderPageBookmarks.test.tsx` covers the page-level scenarios, `BookmarksPanel.test.tsx` the component.
+- TDD evidence: RED first, `BookmarksPanel.test.tsx` failed on the missing module and 6/6 `ReaderPageBookmarks.test.tsx` tests failed (no "Marcadores" control); none passed before implementation. GREEN: reader, library, app 132/132; `tsc --noEmit` clean; `npm run build` OK; `dotnet build` sln 0 errors; Web reader tests 56/56; MAUI App build 0 errors.
+- CLAUDE.md "Web host" now lists the reader endpoints and the `features/reader/` layout.
+
+## F4b verify follow-up
+
+- `useBookmarks`: list sorted by chapter then ms (stable) after load and add; in-flight add guard (`adding`, add ignored while pending or chapter not ready); excerpt cut at 160 UTF-16 units without leaving a lone high surrogate; add/remove responses ignored after a book id change.
+- `BookmarksPanel`: after a delete, focus moves to the next item's delete control, else the previous, else the add button. `ReaderPage` `canAdd` now also requires `chapter.chapterIndex === current` and `!adding`.
+- Tests: new `useBookmarks.test.tsx` (8) plus a focus test in `BookmarksPanel.test.tsx`. RED first: ordering, double add, not-ready add, emoji excerpt, late add/remove after id change and panel focus failed; delete failure, manual chapter change dropping a pending jump and late list after id change already passed (existing behaviour, now pinned).
+- GREEN: reader+library+app 141/141, `tsc --noEmit` clean, `npm run build` OK.

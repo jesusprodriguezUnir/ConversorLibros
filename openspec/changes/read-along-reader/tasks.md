@@ -93,6 +93,6 @@ Constraints for all slices: no Core constructor changes (only the optional trail
 
 - [x] 4.1 RED: `useReaderProgress.test.tsx` (fake timers): PUT on pause, chapter change, every 10 s, keepalive on hide; no saved position → chapter 0; resume loads paused; ms clamped to chapter end; removed chapter falls back to 0; save failure non-blocking. Scenarios: Resume after reload; No saved position; Layout independence; Position beyond chapter end; Saved chapter no longer available; Save failure.
 - [x] 4.2 GREEN: `useReaderProgress` and resume seek in `ReaderPage`.
-- [ ] 4.3 RED: `BookmarksPanel.test.tsx`: add while playing (excerpt ≤160), jump, delete, reload persists, ms clamped, removed-chapter bookmark disabled, corrupt storage → empty list. Scenarios: Add while playing; Jump to bookmark; Bookmarks survive reload; Bookmark beyond chapter end; Bookmark of removed chapter; Corrupt storage file.
-- [ ] 4.4 GREEN: `useBookmarks`, `BookmarksPanel`.
-- [ ] 4.5 Update `CLAUDE.md` (reader endpoints and `reader/` layout). Run `dotnet build ConversorLibros.sln` and scoped tests; build App separately.
+- [x] 4.3 RED: `BookmarksPanel.test.tsx`: add while playing (excerpt ≤160), jump, delete, reload persists, ms clamped, removed-chapter bookmark disabled, corrupt storage → empty list. Scenarios: Add while playing; Jump to bookmark; Bookmarks survive reload; Bookmark beyond chapter end; Bookmark of removed chapter; Corrupt storage file.
+- [x] 4.4 GREEN: `useBookmarks`, `BookmarksPanel`.
+- [x] 4.5 Update `CLAUDE.md` (reader endpoints and `reader/` layout). Run `dotnet build ConversorLibros.sln` and scoped tests; build App separately.

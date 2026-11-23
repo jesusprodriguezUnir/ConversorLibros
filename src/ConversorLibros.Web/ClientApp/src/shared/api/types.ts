@@ -84,6 +84,23 @@ export interface SaveReaderProgressRequest {
   ms: number;
 }
 
+export interface ReaderBookmarkDto {
+  id: string;
+  chapterIndex: number;
+  ms: number;
+  /** The server truncates it to 160 characters. */
+  excerpt: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface CreateReaderBookmarkRequest {
+  chapterIndex: number;
+  ms: number;
+  excerpt?: string | null;
+  note?: string | null;
+}
+
 export interface ReaderSentenceDto {
   text: string;
   startMs: number;

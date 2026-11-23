@@ -122,10 +122,28 @@
   --reader-panel: #26262b;
   color-scheme: dark;
 }
-.reader-appearance {
+.reader-appearance,
+.reader-bookmarks {
   position: relative;
 }
-.reader-appearance-panel {
+.reader-bookmarks-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+.reader-bookmarks-panel li {
+  display: flex;
+  gap: 0.25rem;
+}
+.reader-bookmark-excerpt {
+  display: block;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+.reader-appearance-panel,
+.reader-bookmarks-panel {
   position: absolute;
   bottom: 100%;
   right: 0;
