@@ -65,11 +65,11 @@ Constraints for all slices: no Core constructor changes (only the optional trail
 
 ## F3a: Static view + TOC (spec: reader-ui)
 
-- [ ] 3a.1 RED: `features/reader/pagination.test.ts` (`pagesPerView`, `columnMetrics`, `pageCount`, `pageOfRect`, `clampPage`, `spreadStart`) and `entries.test.ts` (`flattenEntries`, `entryAtMs`). Scenario: Spread threshold.
-- [ ] 3a.2 GREEN: `pagination.ts`, `entries.ts`.
-- [ ] 3a.3 RED: `ReaderPage.test.tsx` (stubbed `scrollWidth`): loads index + chapter, cover page present/absent, TOC navigation, chapter without data, page bounds, direct URL without data. Scenarios: Open chapter from TOC; Chapter without data; Bounds; Missing cover; Direct URL without data.
-- [ ] 3a.4 GREEN: `ReaderPage`, `PaginatedChapter`, `CoverPage`, `ReaderToc`, `PageIndicator`, `usePagination`, `reader.css`; types and client in `shared/api/{types,client}.ts`; route `/biblioteca/:id/leer` in `app/App.tsx`.
-- [ ] 3a.5 RED/GREEN: `BookCard.test.tsx` "Leer" enabled when `hasReader`, disabled with hint otherwise; edit `features/library/BookCard.tsx`. Scenarios: Reader available; Reader unavailable.
+- [x] 3a.1 RED: `features/reader/pagination.test.ts` (`pagesPerView`, `columnMetrics`, `pageCount`, `pageOfRect`, `clampPage`, `spreadStart`) and `entries.test.ts` (`flattenEntries`, `entryAtMs`). Scenario: Spread threshold.
+- [x] 3a.2 GREEN: `pagination.ts`, `entries.ts`.
+- [x] 3a.3 RED: `ReaderPage.test.tsx` (stubbed `scrollWidth`): loads index + chapter, cover page present/absent, TOC navigation, chapter without data, page bounds, direct URL without data. Scenarios: Open chapter from TOC; Chapter without data; Bounds; Missing cover; Direct URL without data.
+- [x] 3a.4 GREEN: `ReaderPage`, `PaginatedChapter`, `CoverPage`, `ReaderToc`, `PageIndicator`, `usePagination`, `reader.css`; types and client in `shared/api/{types,client}.ts`; route `/biblioteca/:id/leer` in `app/App.tsx`.
+- [x] 3a.5 RED/GREEN: `BookCard.test.tsx` "Leer" enabled when `hasReader`, disabled with hint otherwise; edit `features/library/BookCard.tsx`. Scenarios: Reader available; Reader unavailable.
 
 ## F3b: Audio sync (spec: reader-ui)
 
