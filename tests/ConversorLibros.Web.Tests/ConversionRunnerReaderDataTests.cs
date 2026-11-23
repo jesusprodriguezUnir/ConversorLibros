@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ConversorLibros.Core.Abstractions;
 using ConversorLibros.Core.Models;
 using ConversorLibros.Web.Services;
@@ -23,6 +24,20 @@ public sealed class ConversionRunnerReaderDataTests : IDisposable
         Assert.True(File.Exists(Path.Combine(ReaderDir, "chapter_001.json")));
         Assert.True(File.Exists(Path.Combine(ReaderDir, "chapter_002.json")));
         Assert.True(File.Exists(Path.Combine(ReaderDir, "index.json")));
+    }
+
+    [Fact]
+    public async Task PublishAsync_Opus_WritesAlignedParagraphs()
+    {
+        await ReaderDataPublisher.PublishAsync(
+            [Map(1, 1000)], expectedChapters: 1, "Libro", _bookDir, AudiobookFormat.Opus, CancellationToken.None);
+
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(ReaderDir, "chapter_001.json")));
+        var paragraph = Assert.Single(json.RootElement.GetProperty("paragraphs").EnumerateArray());
+        Assert.Equal("sentence", paragraph.GetProperty("mode").GetString());
+        var sentence = Assert.Single(paragraph.GetProperty("sentences").EnumerateArray());
+        Assert.Equal("Texto.", sentence.GetProperty("text").GetString());
+        Assert.Equal(1000, sentence.GetProperty("endMs").GetInt64());
     }
 
     [Fact]

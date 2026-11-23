@@ -126,6 +126,7 @@ public sealed partial class SentenceChunker : IChunker
         return new TextChunk(chapterIndex, order, text, pauseAfter, hash);
     }
 
+    // Internal so ReaderTextSegmenter splits raw text exactly like the chunker splits normalized text.
     [GeneratedRegex(@"(?<=[.!?…])\s+")]
-    private static partial Regex SentenceSplitRegex();
+    internal static partial Regex SentenceSplitRegex();
 }

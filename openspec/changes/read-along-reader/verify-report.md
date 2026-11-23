@@ -46,3 +46,49 @@ SUGGESTION:
 1. SyncMapBuilder.cs:35-45 - IOException from ReadPcmInfo/FileInfo is not caught (only InvalidDataException); assembler would already fail, so low risk.
 2. Task 0.6 said BookConversionPipelineTests; tests live in PipelineSyncCallbackTests.cs (note only).
 3. Chunk hash tests pin invariant culture (pre-existing culture-dependent speed formatting); consider a separate fix.
+
+---
+
+## F1 verification (segmentation and alignment) - branch feat/read-along-reader-f1, uncommitted
+
+Mode: Strict TDD. Tasks 1.1-1.5 all [x]. Scope: F1 only; size:exception accepted.
+
+### Runtime evidence
+- Core: ReaderTextSegmenter, ReaderTextAligner, ChunkHashCharacterization, SentenceChunker, SpanishTextNormalizer, SyncMapBuilder, PipelineSyncCallback -> 36/36 pass.
+- Web: ReaderSidecarWriter, ConversionRunnerReaderData -> 14/14 pass. (Run with -p:BaseOutputPath in scratchpad.)
+
+### Spec scenario -> test
+| Scenario | Test | Status |
+|---|---|---|
+| Abbreviation does not split | SplitSentences_AbbreviationDoesNotSplit_AndKeepsOriginalText | COVERED |
+| Displayed text is original | Align_DisplaysOriginalTextAndHonoursPronunciationDictionary | COVERED |
+| Sentences inside one chunk | Align_SentencesInsideOneChunk_InterpolatesByNormalizedLength (0-250/250-1000) | COVERED |
+| Sentence spanning two chunks | Align_SentenceSpanningChunks_StartsAndEndsAtItsChunkPortions | COVERED |
+| Mismatch in one paragraph | Align_MismatchInOneParagraph_FallsBackOnlyForThatParagraph | COVERED |
+| Roman numeral across paragraph break | Align_RomanNumeralAcrossParagraphBreak_... | COVERED |
+| Empty and whitespace paragraphs | SplitParagraphs_DropsEmpty...; Align_BlankParagraphs_... | COVERED |
+| Pronunciation dictionary | Align_DisplaysOriginalText...HonoursPronunciationDictionary | COVERED |
+Plus 4-fixture parity theory vs real SentenceChunker; publisher test asserts paragraphs in sidecar.
+
+### Invariants
+- Chunk hashes: only SentenceSplitRegex visibility changed (private -> internal); ChunkHash tests green. No new packages, no Core constructor changes, Cli/App untouched.
+- Monotonic/no gaps: entry start = previous end, first = 0, last = max(DurationMs, end); zero-length entries possible only at tail/empty-spoken paragraphs.
+- Publisher: aligner call sits inside the existing try; any non-cancellation exception becomes the warning.
+
+### Deviations
+- (a) Wiring in ReaderDataPublisher: ACCEPTABLE (runner delegates there since F0). Task 1.5 text says ConversionRunner; doc drift only.
+- (b) Lowercase-continuation merge: ACCEPTABLE and required by the "5 p. m. y se fue." scenario. Risk: a sentence legitimately starting lowercase (dialogue, poetry) merges; only affects sentence granularity, not verification.
+- (c) Anchored matching + lookahead-8 resync: ACCEPTABLE; sound because SentenceChunker never crosses paragraph boundaries (chunks are per paragraph). Edge cases reasoned from code: empty chapter -> []; zero chunks -> all paragraph mode, no throw (no divide by zero: overlap>0 implies weight>0); single chunk ok; all mismatched -> one group to end; resync never found -> rest of chapter in paragraph mode.
+
+### Issues
+CRITICAL: none.
+WARNING:
+1. ReaderTextAligner.cs:178-194 - MatchesAt does two Array.IndexOf (O(C)) and FindAnchored scans all chunk starts calling it: O(C^2) per call, up to 8 calls per mismatch. A chapter with C=5000 chunks and several mismatches costs ~1e8-1e9 ops per mismatch; use a Dictionary/binary search over _starts/_ends. Analysis only, not benchmarked.
+2. ReaderTextAligner.cs:96-130 - BuildParagraphs loops entries x chunks twice (O(E*C)); ~1.5e8 Overlap calls for 5k paragraphs. Acceptable now, restrict to overlapping chunk range (monotonic) to make it linear.
+3. ReaderTextAligner.cs:65-78 - resync picks the nearest anchored match among 8 following paragraphs; a short repeated paragraph (e.g. "No.") can anchor at an earlier duplicate and compress the skipped group. Degrades timing only; no test for duplicated paragraphs.
+4. Tests lack explicit cases for empty RawText / zero chunks, resync-never-found and "times within chunk bounds" (task 1.3 lists bounds); behavior is safe per code reading but unpinned.
+SUGGESTION:
+1. tasks.md 1.5 should say ReaderDataPublisher instead of ConversionRunner.
+2. Segmenter merge heuristic could be documented as a known limit for lowercase-leading dialogue.
+
+### F1 verdict: PASS WITH WARNINGS

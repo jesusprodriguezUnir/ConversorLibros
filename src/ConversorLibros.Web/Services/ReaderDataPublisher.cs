@@ -1,5 +1,6 @@
 using ConversorLibros.Core.Abstractions;
 using ConversorLibros.Core.Models;
+using ConversorLibros.Core.Services;
 
 namespace ConversorLibros.Web.Services;
 
@@ -10,6 +11,8 @@ namespace ConversorLibros.Web.Services;
 public static class ReaderDataPublisher
 {
     public const string Warning = "Audiolibro creado, pero no se pudieron generar los datos de lectura.";
+
+    private static readonly SpanishTextNormalizer Normalizer = new();
 
     /// <summary>
     /// Exports the audiobook and only then publishes reader data, so sidecars never sit next to stale or missing audio.
@@ -50,9 +53,9 @@ public static class ReaderDataPublisher
 
         try
         {
-            // Paragraph alignment arrives with the aligner (F1); until then only chunk timings are written.
+            // Same normalizer and (null) dictionary as the runner's pipeline call, so normalized sentences match the chunks.
             var chapters = maps
-                .Select(m => new ReaderChapter(m.ChapterIndex, m.Title, m.DurationMs, m.Chunks, []))
+                .Select(m => new ReaderChapter(m.ChapterIndex, m.Title, m.DurationMs, m.Chunks, ReaderTextAligner.Align(m, Normalizer, null)))
                 .ToList();
 
             if (chapters.Count > 0)

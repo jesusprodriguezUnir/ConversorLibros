@@ -48,11 +48,11 @@ Constraints for all slices: no Core constructor changes (only the optional trail
 
 ## F1: Segmentation and alignment (spec: reader-text-alignment)
 
-- [ ] 1.1 RED: `ReaderTextSegmenterTests`: regex parity with chunker on fixtures; abbreviation merge (`Sr.`); paragraph split on `\n\n`; empty/whitespace paragraphs dropped. Scenarios: Abbreviation does not split; Empty and whitespace paragraphs.
-- [ ] 1.2 GREEN: `Core/Services/ReaderTextSegmenter.cs` (`SplitParagraphs`, `SplitSentences`).
-- [ ] 1.3 RED: `ReaderTextAlignerTests`: sentences within one chunk; sentence spanning chunks (linear interpolation); mismatch → `mode:"paragraph"`; Roman heading across paragraphs → fallback; leftover chunks extend last paragraph; times monotonic and within chunk bounds; display text is original raw; dictionary passed through. Scenarios: Sentences inside one chunk; Sentence spanning two chunks; Mismatch in one paragraph; Roman numeral across paragraph break; Displayed text is original; Pronunciation dictionary.
-- [ ] 1.4 GREEN: `Core/Services/ReaderTextAligner.cs`.
-- [ ] 1.5 Wire aligner into `ConversionRunner` (`new SpanishTextNormalizer()`, null dictionary); extend F0 runner test to assert paragraphs in the sidecar.
+- [x] 1.1 RED: `ReaderTextSegmenterTests`: regex parity with chunker on fixtures; abbreviation merge (`Sr.`); paragraph split on `\n\n`; empty/whitespace paragraphs dropped. Scenarios: Abbreviation does not split; Empty and whitespace paragraphs.
+- [x] 1.2 GREEN: `Core/Services/ReaderTextSegmenter.cs` (`SplitParagraphs`, `SplitSentences`).
+- [x] 1.3 RED: `ReaderTextAlignerTests`: sentences within one chunk; sentence spanning chunks (linear interpolation); mismatch → `mode:"paragraph"`; Roman heading across paragraphs → fallback; leftover chunks extend last paragraph; times monotonic and within chunk bounds; display text is original raw; dictionary passed through. Scenarios: Sentences inside one chunk; Sentence spanning two chunks; Mismatch in one paragraph; Roman numeral across paragraph break; Displayed text is original; Pronunciation dictionary.
+- [x] 1.4 GREEN: `Core/Services/ReaderTextAligner.cs`.
+- [x] 1.5 Wire aligner into `ConversionRunner` (`new SpanishTextNormalizer()`, null dictionary); extend F0 runner test to assert paragraphs in the sidecar.
 
 ## F2: Reader API (spec: reader-api)
 
