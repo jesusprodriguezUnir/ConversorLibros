@@ -4,6 +4,8 @@ import type {
   FileSystemBrowseResponse,
   InspectedBookDto,
   LibraryItemDto,
+  ReaderChapterDto,
+  ReaderIndexDto,
   SettingsResponse,
   StartConversionRequest,
   TestOllamaResponse,
@@ -44,6 +46,24 @@ export const api = {
 
   libraryDownloadUrl(id: string): string {
     return `/api/library/${encodeURIComponent(id)}/download`;
+  },
+
+  libraryCoverUrl(id: string): string {
+    return `/api/library/${encodeURIComponent(id)}/cover`;
+  },
+
+  async getReaderIndex(id: string): Promise<ReaderIndexDto> {
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}/reader`);
+    return parseJson<ReaderIndexDto>(res);
+  },
+
+  async getReaderChapter(id: string, index: number): Promise<ReaderChapterDto> {
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}/reader/chapters/${index}`);
+    return parseJson<ReaderChapterDto>(res);
+  },
+
+  readerAudioUrl(id: string, index: number): string {
+    return `/api/library/${encodeURIComponent(id)}/chapters/${index}/audio`;
   },
 
   async openLibraryItem(id: string): Promise<void> {

@@ -15,6 +15,7 @@ const sampleBooks: LibraryItemDto[] = [
     chapterCount: 24,
     durationSeconds: 7320,
     hasCover: true,
+    hasReader: false,
     coverUrl: "/api/library/book-1/cover",
   },
   {
@@ -25,6 +26,7 @@ const sampleBooks: LibraryItemDto[] = [
     chapterCount: 0,
     durationSeconds: null,
     hasCover: false,
+    hasReader: false,
     coverUrl: null,
   },
 ];

@@ -65,24 +65,24 @@ Constraints for all slices: no Core constructor changes (only the optional trail
 
 ## F3a: Static view + TOC (spec: reader-ui)
 
-- [ ] 3a.1 RED: `features/reader/pagination.test.ts` (`pagesPerView`, `columnMetrics`, `pageCount`, `pageOfRect`, `clampPage`, `spreadStart`) and `entries.test.ts` (`flattenEntries`, `entryAtMs`). Scenario: Spread threshold.
-- [ ] 3a.2 GREEN: `pagination.ts`, `entries.ts`.
-- [ ] 3a.3 RED: `ReaderPage.test.tsx` (stubbed `scrollWidth`): loads index + chapter, cover page present/absent, TOC navigation, chapter without data, page bounds, direct URL without data. Scenarios: Open chapter from TOC; Chapter without data; Bounds; Missing cover; Direct URL without data.
-- [ ] 3a.4 GREEN: `ReaderPage`, `PaginatedChapter`, `CoverPage`, `ReaderToc`, `PageIndicator`, `usePagination`, `reader.css`; types and client in `shared/api/{types,client}.ts`; route `/biblioteca/:id/leer` in `app/App.tsx`.
-- [ ] 3a.5 RED/GREEN: `BookCard.test.tsx` "Leer" enabled when `hasReader`, disabled with hint otherwise; edit `features/library/BookCard.tsx`. Scenarios: Reader available; Reader unavailable.
+- [x] 3a.1 RED: `features/reader/pagination.test.ts` (`pagesPerView`, `columnMetrics`, `pageCount`, `pageOfRect`, `clampPage`, `spreadStart`) and `entries.test.ts` (`flattenEntries`, `entryAtMs`). Scenario: Spread threshold.
+- [x] 3a.2 GREEN: `pagination.ts`, `entries.ts`.
+- [x] 3a.3 RED: `ReaderPage.test.tsx` (stubbed `scrollWidth`): loads index + chapter, cover page present/absent, TOC navigation, chapter without data, page bounds, direct URL without data. Scenarios: Open chapter from TOC; Chapter without data; Bounds; Missing cover; Direct URL without data.
+- [x] 3a.4 GREEN: `ReaderPage`, `PaginatedChapter`, `CoverPage`, `ReaderToc`, `PageIndicator`, `usePagination`, `reader.css`; types and client in `shared/api/{types,client}.ts`; route `/biblioteca/:id/leer` in `app/App.tsx`.
+- [x] 3a.5 RED/GREEN: `BookCard.test.tsx` "Leer" enabled when `hasReader`, disabled with hint otherwise; edit `features/library/BookCard.tsx`. Scenarios: Reader available; Reader unavailable.
 
 ## F3b: Audio sync (spec: reader-ui)
 
-- [ ] 3b.1 RED: `sync.test.ts` (`findActiveEntry`, `pageTurnFraction`, `skipMs` bounds, `clampSpeed` 0.75–2, `bookPercent`). Scenarios: Skip bounds; Speed range.
-- [ ] 3b.2 GREEN: `sync.ts`.
-- [ ] 3b.3 RED: `useAudioSync.test.tsx` (fake rAF/audio): highlight follows, paragraph fallback highlights the whole paragraph, sentence spanning pages turns by fraction, chapter end, click-to-seek, audio load error. Scenarios: Highlight follows audio; Paragraph fallback; Sentence spanning two pages; Chapter ends; Click to seek; Audio load error.
-- [ ] 3b.4 RED: `useAutoFollow.test.tsx`: manual navigation suspends follow and shows "Volver al audio"; button and click-to-seek resume. Scenarios: Suspend; Resume follow; Click-to-seek resumes follow.
-- [ ] 3b.5 GREEN: `useAudioSync`, `useAutoFollow`, `AudioControls`, `BackToAudioButton`, `ReaderToolbar` (classList toggle on `[data-entry]`).
+- [x] 3b.1 RED: `sync.test.ts` (`findActiveEntry`, `pageTurnFraction`, `skipMs` bounds, `clampSpeed` 0.75–2, `bookPercent`). Scenarios: Skip bounds; Speed range.
+- [x] 3b.2 GREEN: `sync.ts`.
+- [x] 3b.3 RED: `useAudioSync.test.tsx` (fake rAF/audio): highlight follows, paragraph fallback highlights the whole paragraph, sentence spanning pages turns by fraction, chapter end, click-to-seek, audio load error. Scenarios: Highlight follows audio; Paragraph fallback; Sentence spanning two pages; Chapter ends; Click to seek; Audio load error.
+- [x] 3b.4 RED: `useAutoFollow.test.tsx`: manual navigation suspends follow and shows "Volver al audio"; button and click-to-seek resume. Scenarios: Suspend; Resume follow; Click-to-seek resumes follow.
+- [x] 3b.5 GREEN: `useAudioSync`, `useAutoFollow`, `AudioControls`, `BackToAudioButton`, `ReaderToolbar` (classList toggle on `[data-entry]`).
 
 ## F3c: Appearance + spread (spec: reader-ui)
 
-- [ ] 3c.1 RED: appearance reducer/storage tests (`reader.appearance.v1`), re-anchor by entry on resize/font change/theme change during playback. Scenarios: Resize keeps position; Change theme during playback; Font size change.
-- [ ] 3c.2 GREEN: `ReaderAppearanceContext`, `AppearancePanel`, `[data-theme]` CSS variables, `ResizeObserver` and `document.fonts.ready` re-anchor.
+- [x] 3c.1 RED: appearance reducer/storage tests (`reader.appearance.v1`), re-anchor by entry on resize/font change/theme change during playback. Scenarios: Resize keeps position; Change theme during playback; Font size change.
+- [x] 3c.2 GREEN: `ReaderAppearanceContext`, `AppearancePanel`, `[data-theme]` CSS variables, `ResizeObserver` and `document.fonts.ready` re-anchor.
 
 ## F4: Resume + bookmarks (spec: reader-progress-bookmarks)
 
