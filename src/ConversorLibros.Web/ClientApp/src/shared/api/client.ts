@@ -1,18 +1,24 @@
 import type {
+  CatalogBookDto,
   ChapterPreviewDto,
   ConversionStateDto,
   FileSystemBrowseResponse,
+  FolderScanSummaryDto,
+  ImportBooksResponse,
   InspectedBookDto,
   CreateReaderBookmarkRequest,
+  LibraryCatalogResponse,
   LibraryItemDto,
   ReaderBookmarkDto,
   ReaderChapterDto,
   ReaderIndexDto,
   ReaderProgressDto,
   SaveReaderProgressRequest,
+  SetLibraryFolderResponse,
   SettingsResponse,
   StartConversionRequest,
   TestOllamaResponse,
+  UpdateBookMetadataRequest,
   WebSettings,
 } from "./types";
 
@@ -46,6 +52,80 @@ export const api = {
   async getLibrary(): Promise<LibraryItemDto[]> {
     const res = await fetch("/api/library");
     return parseJson<LibraryItemDto[]>(res);
+  },
+
+  async getLibraryCatalog(params?: {
+    q?: string;
+    author?: string;
+    series?: string;
+    tag?: string;
+    audioStatus?: string;
+    sort?: string;
+    dir?: "asc" | "desc";
+  }): Promise<LibraryCatalogResponse> {
+    const sp = new URLSearchParams();
+    if (params?.q) sp.set("q", params.q);
+    if (params?.author) sp.set("author", params.author);
+    if (params?.series) sp.set("series", params.series);
+    if (params?.tag) sp.set("tag", params.tag);
+    if (params?.audioStatus) sp.set("audioStatus", params.audioStatus);
+    if (params?.sort) sp.set("sort", params.sort);
+    if (params?.dir) sp.set("dir", params.dir);
+    const qs = sp.toString();
+    const res = await fetch(`/api/library/catalog${qs ? `?${qs}` : ""}`);
+    return parseJson<LibraryCatalogResponse>(res);
+  },
+
+  async setLibraryFolder(path: string): Promise<SetLibraryFolderResponse> {
+    const res = await fetch("/api/library/folder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path }),
+    });
+    return parseJson<SetLibraryFolderResponse>(res);
+  },
+
+  async scanLibraryFolder(): Promise<FolderScanSummaryDto> {
+    const res = await fetch("/api/library/scan", { method: "POST" });
+    return parseJson<FolderScanSummaryDto>(res);
+  },
+
+  async importBooks(files: File[]): Promise<ImportBooksResponse> {
+    const form = new FormData();
+    for (const file of files) {
+      form.append("files", file);
+    }
+    const res = await fetch("/api/library/import", {
+      method: "POST",
+      body: form,
+    });
+    return parseJson<ImportBooksResponse>(res);
+  },
+
+  async updateBookMetadata(id: string, patch: UpdateBookMetadataRequest): Promise<CatalogBookDto> {
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    return parseJson<CatalogBookDto>(res);
+  },
+
+  async uploadBookCover(id: string, file: File): Promise<void> {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}/cover`, {
+      method: "PUT",
+      body: form,
+    });
+    if (!res.ok) await parseJson(res);
+  },
+
+  async deleteBook(id: string): Promise<void> {
+    const res = await fetch(`/api/library/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) await parseJson(res);
   },
 
   libraryDownloadUrl(id: string): string {

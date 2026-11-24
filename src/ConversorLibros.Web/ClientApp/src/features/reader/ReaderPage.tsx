@@ -57,6 +57,7 @@ function ReaderView() {
   const position = chapters.findIndex((c) => c.index === current);
   const nextChapter = chapters[position + 1]?.index;
   const prevChapter = chapters[position - 1]?.index;
+  const chapterHasAudio = Boolean(chapters[position]?.audioKind);
 
   // A manual pick drops any pending autoplay; `onEnded` re-arms it after calling this.
   const selectChapter = (chapterIndex: number) => {
@@ -70,7 +71,7 @@ function ReaderView() {
 
   const sync = useAudioSync({
     audio,
-    src: chapter && current !== null ? api.readerAudioUrl(id, current) : null,
+    src: chapter && current !== null && chapterHasAudio ? api.readerAudioUrl(id, current) : null,
     entries,
     durationMs: chapter?.durationMs ?? 0,
     contentRef,
@@ -240,31 +241,38 @@ function ReaderView() {
           />
         )}
       </main>
-      <ReaderToolbar
-        playing={sync.playing}
-        disabled={!pageReady}
-        speed={sync.speed}
-        error={sync.error}
-        percent={bookPercent(
-          chapters.map((c) => c.durationMs),
-          position,
-          sync.positionMs
-        )}
-        suspended={!follow.following}
-        onToggle={sync.toggle}
-        onSkip={sync.skip}
-        onSpeed={(direction) => sync.changeSpeed(direction * SPEED_STEP)}
-        onBackToAudio={backToAudio}
-        bookmarks={{
-          bookmarks: bookmarks.bookmarks,
-          chapters: index.chapters,
-          error: bookmarks.error,
-          canAdd: pageReady && chapter !== null && chapter.chapterIndex === current && !bookmarks.adding,
-          onAdd: () => void bookmarks.add(),
-          onJump: bookmarks.jump,
-          onDelete: (b) => void bookmarks.remove(b),
-        }}
-      />
+      {chapterHasAudio ? (
+        <ReaderToolbar
+          playing={sync.playing}
+          disabled={!pageReady}
+          speed={sync.speed}
+          error={sync.error}
+          percent={bookPercent(
+            chapters.map((c) => c.durationMs),
+            position,
+            sync.positionMs
+          )}
+          suspended={!follow.following}
+          onToggle={sync.toggle}
+          onSkip={sync.skip}
+          onSpeed={(direction) => sync.changeSpeed(direction * SPEED_STEP)}
+          onBackToAudio={backToAudio}
+          bookmarks={{
+            bookmarks: bookmarks.bookmarks,
+            chapters: index.chapters,
+            error: bookmarks.error,
+            canAdd: pageReady && chapter !== null && chapter.chapterIndex === current && !bookmarks.adding,
+            onAdd: () => void bookmarks.add(),
+            onJump: bookmarks.jump,
+            onDelete: (b) => void bookmarks.remove(b),
+          }}
+        />
+      ) : (
+        <div className="reader-toolbar" role="region" aria-label="Modo solo lectura">
+          <span>Modo solo lectura</span>
+          <Link to="/convertir">Convertir a audiolibro</Link>
+        </div>
+      )}
       <footer className="reader-controls">
         <button type="button" disabled={prevChapter === undefined} onClick={() => selectChapter(prevChapter)}>
           Capítulo anterior
