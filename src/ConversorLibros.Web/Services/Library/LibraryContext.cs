@@ -79,7 +79,7 @@ public sealed class LibraryContext(JsonSettingsStore settingsStore) : ILibraryCo
         {
             DataSource = dbPath,
             Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared,
+            Pooling = false,
         };
         return new SqliteConnection(builder.ToString());
     }

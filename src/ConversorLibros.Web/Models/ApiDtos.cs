@@ -62,7 +62,51 @@ public sealed record ReaderIndexResponse(
     string? Reason,
     string? Title,
     bool HasCover,
-    IReadOnlyList<ReaderIndexChapter> Chapters);
+    IReadOnlyList<ReaderIndexChapter> Chapters,
+    bool HasAudio = false);
+
+public sealed record SetLibraryFolderRequest(string Path);
+
+public sealed record CatalogBookDto(
+    string Id,
+    string Title,
+    string Author,
+    string? Series,
+    double? SeriesIndex,
+    string? Publisher,
+    string? PublishedDate,
+    string? Isbn,
+    string? Description,
+    string? Language,
+    IReadOnlyList<string> Tags,
+    string? EpubPath,
+    bool HasEpub,
+    bool HasCover,
+    string? CoverUrl,
+    bool HasReader,
+    string AudioStatus,
+    string? AudioFormat,
+    double? AudioDurationSeconds,
+    int ChapterCount,
+    int? ReadingChapter,
+    double ReadingPercent,
+    DateTimeOffset? LastReadAt,
+    bool IsLegacy,
+    DateTimeOffset CreatedAt);
+
+public sealed record LibraryCatalogResponse(
+    IReadOnlyList<CatalogBookDto> Items,
+    int TotalCount,
+    Services.Library.LibraryFacetsDto Facets,
+    string BooksRoot,
+    string OutputRoot);
+
+public sealed record SetLibraryFolderResponse(
+    string BooksRoot,
+    Services.Library.FolderScanSummary Scan);
+
+public sealed record ImportBooksResponse(
+    IReadOnlyList<Services.Library.ImportBookResultDto> Results);
 
 public sealed record ReaderProgress(int ChapterIndex, long Ms, DateTimeOffset UpdatedAt);
 
