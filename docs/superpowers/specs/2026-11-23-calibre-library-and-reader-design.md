@@ -84,16 +84,16 @@ Antes de sumar capas nuevas, se estabiliza la base actual:
 
 ### Fase 1 — Catálogo SQLite, importación de EPUBs e interfaz estilo Calibre
 
-#### Almacenamiento y estructura en disco
-Se introduce una base de datos SQLite embebida (`Microsoft.Data.Sqlite`) ubicada en `<LibraryRoot>/library.db` (donde `LibraryRoot` reutiliza el `OutputRoot` configurado por el usuario para mantener la biblioteca autocontenida y portable).
+#### Almacenamiento y estructura en disco *(actualizado por decisión del usuario)*
+Se introduce una base de datos SQLite embebida (`Microsoft.Data.Sqlite`) ubicada en `<OutputRoot>/library.db`, junto con una carpeta de libros configurable (`booksRoot`) que la aplicación **escanea recursivamente sin duplicar archivos `.epub`**.
 
-Estructura por libro en `<LibraryRoot>/books/<bookId>/`:
+- **Carpeta de libros (`booksRoot`):** carpeta elegida por el usuario en su PC (puede contener subcarpetas por autor/serie). La aplicación indexa los `.epub` en su ubicación original (`epub_path`) y nunca los copia ni los modifica. Al añadir nuevos libros desde la interfaz (*"Añadir libros"* o *drag & drop*), los `.epub` se guardan directamente en `booksRoot` y se indexan al instante.
+- **Metadatos, portadas y sidecars en `<OutputRoot>`:** la carpeta `booksRoot` permanece limpia; `library.db`, las portadas extraídas, los sidecars de lectura y los audiolibros convertidos se almacenan bajo `<OutputRoot>`:
 ```text
-<LibraryRoot>/
+<OutputRoot>/
 ├── library.db
-└── books/
-    └── <bookId>/              # GUID corto o slug único inmutable
-        ├── source.epub        # Copia del EPUB importado (si procede de importación)
+└── .library-cache/
+    └── <bookId>/
         ├── cover.jpg|png      # Portada extraída o personalizada
         ├── reader/            # Sidecars de lectura (index.json, chapter-NNN.json, progress.json, bookmarks.json)
         ├── audio/             # Audiolibro exportado (*.opus o <titulo>.m4b)

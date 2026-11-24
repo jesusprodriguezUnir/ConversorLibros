@@ -64,7 +64,8 @@ public sealed class JsonSettingsStore
                     OllamaModel: string.IsNullOrWhiteSpace(parsed.OllamaModel) ? DefaultOllamaModel : parsed.OllamaModel,
                     FfmpegOverride: parsed.FfmpegOverride ?? string.Empty,
                     DefaultSpeed: NormalizeSpeed(parsed.DefaultSpeed),
-                    DefaultFormat: NormalizeFormat(parsed.DefaultFormat));
+                    DefaultFormat: NormalizeFormat(parsed.DefaultFormat),
+                    BooksRoot: (parsed.BooksRoot ?? string.Empty).Trim());
             }
             catch (Exception ex) when (ex is JsonException or IOException)
             {
@@ -82,7 +83,8 @@ public sealed class JsonSettingsStore
             OllamaModel: string.IsNullOrWhiteSpace(input.OllamaModel) ? DefaultOllamaModel : input.OllamaModel.Trim(),
             FfmpegOverride: (input.FfmpegOverride ?? string.Empty).Trim(),
             DefaultSpeed: NormalizeSpeed(input.DefaultSpeed),
-            DefaultFormat: NormalizeFormat(input.DefaultFormat));
+            DefaultFormat: NormalizeFormat(input.DefaultFormat),
+            BooksRoot: (input.BooksRoot ?? string.Empty).Trim());
 
         lock (_gate)
         {

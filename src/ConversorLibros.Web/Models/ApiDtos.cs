@@ -7,7 +7,8 @@ public sealed record WebSettings(
     string OllamaModel,
     string FfmpegOverride,
     float DefaultSpeed = 1.0f,
-    string DefaultFormat = "opus");
+    string DefaultFormat = "opus",
+    string BooksRoot = "");
 
 public sealed record PiperValidationStatus(bool IsValid, string Message);
 

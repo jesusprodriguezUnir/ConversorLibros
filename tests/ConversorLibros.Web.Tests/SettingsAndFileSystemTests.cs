@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using ConversorLibros.Web.Models;
 using ConversorLibros.Web.Services;
+using ConversorLibros.Web.Services.Library;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -19,6 +21,7 @@ public sealed class SettingsAndFileSystemTests : IDisposable
 
     public void Dispose()
     {
+        SqliteConnection.ClearAllPools();
         if (Directory.Exists(_tempRoot))
         {
             Directory.Delete(_tempRoot, recursive: true);
@@ -142,6 +145,89 @@ public sealed class SettingsAndFileSystemTests : IDisposable
         Assert.NotNull(payload);
         Assert.False(payload.Connected);
         Assert.False(payload.ModelInstalled);
+    }
+
+    [Fact]
+    public async Task PutSettings_PersistsBooksRoot()
+    {
+        var outputRoot = Path.Combine(_tempRoot, "out-books-root");
+        var booksRoot = Path.Combine(_tempRoot, "my-epubs");
+        Directory.CreateDirectory(outputRoot);
+        Directory.CreateDirectory(booksRoot);
+
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var putResponse = await client.PutAsJsonAsync(
+            "/api/settings",
+            new WebSettings(
+                PiperModelDir: "",
+                OutputRoot: outputRoot,
+                OllamaUrl: JsonSettingsStore.DefaultOllamaUrl,
+                OllamaModel: JsonSettingsStore.DefaultOllamaModel,
+                FfmpegOverride: "",
+                BooksRoot: booksRoot));
+
+        Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
+        var saved = await putResponse.Content.ReadFromJsonAsync<SettingsResponse>();
+        Assert.NotNull(saved);
+        Assert.Equal(booksRoot, saved.Settings.BooksRoot);
+
+        var getResponse = await client.GetFromJsonAsync<SettingsResponse>("/api/settings");
+        Assert.NotNull(getResponse);
+        Assert.Equal(booksRoot, getResponse.Settings.BooksRoot);
+    }
+
+    [Fact]
+    public async Task PutSettings_ChangingOutputRootWhileJobActive_Returns409AndDoesNotSave()
+    {
+        var initialOutputRoot = Path.Combine(_tempRoot, "out-initial");
+        var newOutputRoot = Path.Combine(_tempRoot, "out-changed");
+        Directory.CreateDirectory(initialOutputRoot);
+        Directory.CreateDirectory(newOutputRoot);
+
+        var settingsPath = Path.Combine(_tempRoot, "guard-settings.json");
+        var settingsStore = new JsonSettingsStore(settingsPath);
+        settingsStore.Save(new WebSettings(
+            PiperModelDir: "",
+            OutputRoot: initialOutputRoot,
+            OllamaUrl: JsonSettingsStore.DefaultOllamaUrl,
+            OllamaModel: JsonSettingsStore.DefaultOllamaModel,
+            FfmpegOverride: ""));
+
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.AddSingleton(settingsStore);
+            });
+        });
+
+        var libraryContext = factory.Services.GetRequiredService<ILibraryContext>();
+        using (var conn = libraryContext.OpenConnection())
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                INSERT INTO books (id, title, sort_title, created_at, updated_at)
+                VALUES ('book-1', 'Test', 'Test', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+                INSERT INTO conversion_jobs (id, book_id, status, options_json, created_at)
+                VALUES ('job-1', 'book-1', 'queued', '{}', '2026-01-01T00:00:00Z');
+                """;
+            cmd.ExecuteNonQuery();
+        }
+
+        using var client = factory.CreateClient();
+        var response = await client.PutAsJsonAsync(
+            "/api/settings",
+            new WebSettings(
+                PiperModelDir: "",
+                OutputRoot: newOutputRoot,
+                OllamaUrl: JsonSettingsStore.DefaultOllamaUrl,
+                OllamaModel: JsonSettingsStore.DefaultOllamaModel,
+                FfmpegOverride: ""));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(initialOutputRoot, settingsStore.Get().OutputRoot);
     }
 
     private WebApplicationFactory<Program> CreateFactory()

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ConversorLibros.Web.Models;
 using ConversorLibros.Web.Services;
+using ConversorLibros.Web.Services.Library;
 
 namespace ConversorLibros.Web.Endpoints;
 
@@ -12,9 +13,40 @@ public static class SettingsEndpoints
 
         group.MapGet("/", (JsonSettingsStore store) => Results.Ok(store.GetResponse()));
 
-        group.MapPut("/", (WebSettings settings, JsonSettingsStore store) =>
+        group.MapPut("/", async (
+            WebSettings settings,
+            JsonSettingsStore store,
+            SqliteLibraryRepository repository,
+            ILibraryContext libraryContext,
+            ConversionJobManager jobManager,
+            CancellationToken ct) =>
         {
+            var current = store.Get();
+            var incomingOutputRoot = string.IsNullOrWhiteSpace(settings.OutputRoot)
+                ? JsonSettingsStore.DefaultOutputRoot
+                : settings.OutputRoot.Trim();
+
+            var outputRootChanged = !string.Equals(
+                current.OutputRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                incomingOutputRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase);
+
+            if (outputRootChanged)
+            {
+                var runningInMemory = string.Equals(jobManager.GetSnapshot().Status, "running", StringComparison.OrdinalIgnoreCase);
+                if (runningInMemory || await repository.HasActiveOrQueuedJobsAsync(ct))
+                {
+                    return Results.Conflict(new ErrorResponse(
+                        "No se puede cambiar la carpeta de biblioteca mientras hay conversiones en curso o en cola."));
+                }
+            }
+
             var saved = store.Save(settings);
+            if (outputRootChanged)
+            {
+                libraryContext.EnsureInitialized();
+            }
+
             return Results.Ok(store.BuildResponse(saved));
         });
 
