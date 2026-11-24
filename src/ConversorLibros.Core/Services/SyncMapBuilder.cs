@@ -24,7 +24,8 @@ public static class SyncMapBuilder
 
         var timings = new List<ChunkTiming>(chunks.Count);
         long cumulativeBytes = 0;
-        long previousEndMs = 0;
+        long cumulativePauseMs = 0;
+        long cursorMs = 0;
         int byteRate = 0;
 
         for (var i = 0; i < chunks.Count; i++)
@@ -49,13 +50,19 @@ public static class SyncMapBuilder
                 return null;
             }
 
+            var startMs = cursorMs;
             cumulativeBytes += dataBytes;
-            var endMs = ToMilliseconds(cumulativeBytes, byteRate);
-            timings.Add(new ChunkTiming(chunks[i].Order, chunks[i].NormalizedText, previousEndMs, endMs));
-            previousEndMs = endMs;
+            var endMs = ToMilliseconds(cumulativeBytes, byteRate) + cumulativePauseMs;
+            timings.Add(new ChunkTiming(chunks[i].Order, chunks[i].NormalizedText, startMs, endMs));
+
+            var pauseMs = chunks[i].PauseAfter > TimeSpan.Zero
+                ? (long)Math.Round(chunks[i].PauseAfter.TotalMilliseconds)
+                : 0;
+            cumulativePauseMs += pauseMs;
+            cursorMs = endMs + pauseMs;
         }
 
-        return new ChapterSyncMap(chapter.Index, chapter.Title, chapter.RawText, previousEndMs, timings);
+        return new ChapterSyncMap(chapter.Index, chapter.Title, chapter.RawText, cursorMs, timings);
     }
 
     private static long ToMilliseconds(long bytes, int byteRate) =>

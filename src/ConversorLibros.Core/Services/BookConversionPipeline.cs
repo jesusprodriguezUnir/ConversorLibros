@@ -113,7 +113,8 @@ public sealed class BookConversionPipeline
                 progress?.Report(new ConversionProgress(chapter.Index, selectedChapters.Count, i + 1, chunks.Count, "Synthesizing"));
             }
 
-            var chapterPath = await _chapterAssembler.AssembleChapterAsync(chapter.Index, chunkPaths, outputDirectory, cancellationToken).ConfigureAwait(false);
+            var pausesAfter = chunks.Select(c => c.PauseAfter).ToList();
+            var chapterPath = await _chapterAssembler.AssembleChapterAsync(chapter.Index, chunkPaths, outputDirectory, pausesAfter, cancellationToken).ConfigureAwait(false);
             assembledChapters.Add(chapterPath);
 
             // Timings use the post-translation chapter, so the reader shows what is spoken.

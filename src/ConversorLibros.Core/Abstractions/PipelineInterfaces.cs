@@ -73,4 +73,12 @@ public interface IChapterAssembler
         IReadOnlyList<string> chunkAudioPaths,
         string outputDirectory,
         CancellationToken cancellationToken = default);
+
+    Task<string> AssembleChapterAsync(
+        int chapterIndex,
+        IReadOnlyList<string> chunkAudioPaths,
+        string outputDirectory,
+        IReadOnlyList<TimeSpan>? pausesAfter,
+        CancellationToken cancellationToken = default) =>
+        AssembleChapterAsync(chapterIndex, chunkAudioPaths, outputDirectory, cancellationToken);
 }

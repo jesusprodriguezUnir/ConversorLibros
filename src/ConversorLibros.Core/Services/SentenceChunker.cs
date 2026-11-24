@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -120,7 +121,7 @@ public sealed partial class SentenceChunker : IChunker
         float speed,
         string modelVersion)
     {
-        var key = $"{text}|{voiceId}|{speed:F2}|{modelVersion}";
+        var key = string.Create(CultureInfo.InvariantCulture, $"{text}|{voiceId}|{speed:F2}|{modelVersion}");
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(key));
         var hash = Convert.ToHexStringLower(hashBytes);
         return new TextChunk(chapterIndex, order, text, pauseAfter, hash);
