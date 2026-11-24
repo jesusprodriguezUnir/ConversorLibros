@@ -85,6 +85,34 @@ public class SyncMapBuilderTests : IDisposable
         Assert.Throws<ArgumentException>(() => SyncMapBuilder.Build(Chapter, Chunks("Uno.", "Dos."), paths));
     }
 
+    [Fact]
+    public void Build_AdvancesNextChunkStartMsByPauseAfter()
+    {
+        var paths = new[] { WriteChunk("a", 48000), WriteChunk("b", 48000) };
+        var chunks = new[]
+        {
+            new TextChunk(7, 0, "Hola.", TimeSpan.FromMilliseconds(300), "hash0"),
+            new TextChunk(7, 1, "Adiós.", TimeSpan.FromMilliseconds(500), "hash1")
+        };
+
+        var map = SyncMapBuilder.Build(Chapter, chunks, paths);
+
+        Assert.NotNull(map);
+        Assert.Equal(2800, map.DurationMs);
+        Assert.Collection(
+            map.Chunks,
+            c =>
+            {
+                Assert.Equal(0, c.StartMs);
+                Assert.Equal(1000, c.EndMs);
+            },
+            c =>
+            {
+                Assert.Equal(1300, c.StartMs);
+                Assert.Equal(2300, c.EndMs);
+            });
+    }
+
     private static IReadOnlyList<TextChunk> Chunks(params string[] texts) =>
         texts.Select((t, i) => new TextChunk(7, i, t, TimeSpan.Zero, $"hash{i}")).ToList();
 

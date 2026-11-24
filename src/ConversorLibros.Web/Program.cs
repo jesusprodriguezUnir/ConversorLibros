@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ConversorLibros.Web.Endpoints;
 using ConversorLibros.Web.Services;
+using ConversorLibros.Web.Services.Library;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,12 @@ builder.Services.AddSingleton(new PiperModelLocator(
     builder.Environment.ContentRootPath,
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
 builder.Services.AddSingleton<JsonSettingsStore>();
+builder.Services.AddSingleton<ILibraryContext, LibraryContext>();
+builder.Services.AddSingleton<SqliteLibraryRepository>();
+builder.Services.AddSingleton<TextOnlyReaderSidecarWriter>();
+builder.Services.AddSingleton<LegacyLibraryImporter>();
+builder.Services.AddSingleton<LibraryFolderScanner>();
+builder.Services.AddSingleton<BookImportService>();
 builder.Services.AddSingleton<UploadedBookStore>();
 builder.Services.AddSingleton<LibraryBookResolver>();
 builder.Services.AddSingleton<ReaderStore>();

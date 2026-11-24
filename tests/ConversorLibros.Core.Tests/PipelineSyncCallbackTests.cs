@@ -24,7 +24,7 @@ public class PipelineSyncCallbackTests : IDisposable
         Assert.Equal(2, wavs.Count);
         Assert.Equal([1, 2], maps.Select(m => m.ChapterIndex));
         Assert.Equal(["Hola mundo.", "Adiós mundo."], maps.Select(m => m.RawText));
-        Assert.All(maps, m => Assert.Equal(100, m.DurationMs));
+        Assert.All(maps, m => Assert.Equal(1600, m.DurationMs)); // 100 ms spoken + 1500 ms end-of-chapter pause
         Assert.All(maps, m => Assert.NotEmpty(m.Chunks));
     }
 

@@ -1,6 +1,7 @@
 using ConversorLibros.Core.Services;
 using ConversorLibros.Web.Models;
 using ConversorLibros.Web.Services;
+using ConversorLibros.Web.Services.Library;
 
 namespace ConversorLibros.Web.Endpoints;
 
@@ -14,7 +15,7 @@ public static class ReaderEndpoints
 
         group.MapGet("/reader", async (string id, LibraryBookResolver books, ReaderStore store, CancellationToken ct) =>
         {
-            if (books.ResolveOpusBookDir(id) is not { } bookDir)
+            if (await books.ResolveReaderDirAsync(id, ct) is not { } bookDir)
             {
                 return NotFound();
             }
@@ -23,17 +24,19 @@ public static class ReaderEndpoints
             if (index is null)
             {
                 var reason = File.Exists(Path.Combine(bookDir, ReaderSidecarWriter.FolderName, "index.json")) ? "unreadable" : "no-data";
-                return Results.Ok(new ReaderIndexResponse(false, reason, null, false, []));
+                return Results.Ok(new ReaderIndexResponse(false, reason, null, false, [], false));
             }
 
+            var chapters = index.Chapters ?? [];
             var hasCover = CoverNames.Any(name => File.Exists(Path.Combine(bookDir, name)));
-            return Results.Ok(new ReaderIndexResponse(true, null, index.Title, hasCover, index.Chapters ?? []));
+            var hasAudio = chapters.Any(c => !string.IsNullOrWhiteSpace(c.AudioKind));
+            return Results.Ok(new ReaderIndexResponse(true, null, index.Title, hasCover, chapters, hasAudio));
         });
 
         group.MapGet("/reader/chapters/{n:int:min(0)}", async (
             string id, int n, LibraryBookResolver books, ReaderStore store, CancellationToken ct) =>
         {
-            if (books.ResolveOpusBookDir(id) is not { } bookDir)
+            if (await books.ResolveReaderDirAsync(id, ct) is not { } bookDir)
             {
                 return NotFound();
             }
@@ -75,7 +78,7 @@ public static class ReaderEndpoints
 
         group.MapGet("/reader/progress", async (string id, LibraryBookResolver books, ReaderStore store, CancellationToken ct) =>
         {
-            if (books.ResolveOpusBookDir(id) is not { } bookDir)
+            if (await books.ResolveReaderDirAsync(id, ct) is not { } bookDir)
             {
                 return NotFound();
             }
@@ -85,28 +88,53 @@ public static class ReaderEndpoints
         });
 
         group.MapPut("/reader/progress", async (
-            string id, SaveProgressRequest request, LibraryBookResolver books, ReaderStore store, CancellationToken ct) =>
+            string id,
+            SaveProgressRequest request,
+            LibraryBookResolver books,
+            ReaderStore store,
+            SqliteLibraryRepository repository,
+            CancellationToken ct) =>
         {
-            if (books.ResolveOpusBookDir(id) is not { } bookDir)
+            if (await books.ResolveReaderDirAsync(id, ct) is not { } bookDir)
             {
                 return NotFound();
             }
 
             var (status, progress) = await store.PutProgressAsync(bookDir, request.ChapterIndex, request.Ms, ct);
-            return status == ReaderStoreStatus.Ok
-                ? Results.Ok(progress)
-                : Failure(status, "Posición de lectura no válida.");
+            if (status != ReaderStoreStatus.Ok)
+            {
+                return Failure(status, "Posición de lectura no válida.");
+            }
+
+            var index = await store.ReadIndexAsync(bookDir, ct);
+            if (index?.Chapters is { Count: > 0 } chapters && progress is not null)
+            {
+                var pos = 0;
+                for (var i = 0; i < chapters.Count; i++)
+                {
+                    if (chapters[i].Index == progress.ChapterIndex)
+                    {
+                        pos = i;
+                        break;
+                    }
+                }
+
+                var percent = Math.Round((pos + 1) * 100.0 / chapters.Count, 1);
+                await repository.UpdateReadingProgressAsync(id, progress.ChapterIndex, percent, progress.UpdatedAt, ct);
+            }
+
+            return Results.Ok(progress);
         });
 
         group.MapGet("/reader/bookmarks", async (string id, LibraryBookResolver books, ReaderStore store, CancellationToken ct) =>
-            books.ResolveOpusBookDir(id) is not { } bookDir
+            await books.ResolveReaderDirAsync(id, ct) is not { } bookDir
                 ? NotFound()
                 : Results.Ok(await store.ListBookmarksAsync(bookDir, ct)));
 
         group.MapPost("/reader/bookmarks", async (
             string id, CreateBookmarkRequest request, LibraryBookResolver books, ReaderStore store, CancellationToken ct) =>
         {
-            if (books.ResolveOpusBookDir(id) is not { } bookDir)
+            if (await books.ResolveReaderDirAsync(id, ct) is not { } bookDir)
             {
                 return NotFound();
             }
@@ -122,7 +150,7 @@ public static class ReaderEndpoints
             string id, Guid bookmarkId, UpdateBookmarkNoteRequest request,
             LibraryBookResolver books, ReaderStore store, CancellationToken ct) =>
         {
-            if (books.ResolveOpusBookDir(id) is not { } bookDir)
+            if (await books.ResolveReaderDirAsync(id, ct) is not { } bookDir)
             {
                 return NotFound();
             }
@@ -134,7 +162,7 @@ public static class ReaderEndpoints
         group.MapDelete("/reader/bookmarks/{bookmarkId:guid}", async (
             string id, Guid bookmarkId, LibraryBookResolver books, ReaderStore store, CancellationToken ct) =>
         {
-            if (books.ResolveOpusBookDir(id) is not { } bookDir)
+            if (await books.ResolveReaderDirAsync(id, ct) is not { } bookDir)
             {
                 return NotFound();
             }

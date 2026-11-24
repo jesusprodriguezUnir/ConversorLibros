@@ -6,6 +6,7 @@ export interface WebSettings {
   ffmpegOverride: string;
   defaultSpeed: number;
   defaultFormat: "opus" | "m4b";
+  booksRoot?: string;
 }
 
 export interface PiperValidationStatus {
@@ -70,6 +71,100 @@ export interface ReaderIndexDto {
   title: string | null;
   hasCover: boolean;
   chapters: ReaderIndexChapterDto[];
+  hasAudio?: boolean;
+}
+
+export interface FacetItemDto {
+  name: string;
+  count: number;
+}
+
+export interface LibraryCountsDto {
+  all: number;
+  withAudio: number;
+  textOnly: number;
+  converting: number;
+}
+
+export interface LibraryFacetsDto {
+  counts: LibraryCountsDto;
+  authors: FacetItemDto[];
+  series: FacetItemDto[];
+  tags: FacetItemDto[];
+}
+
+export interface CatalogBookDto {
+  id: string;
+  title: string;
+  author: string;
+  series: string | null;
+  seriesIndex: number | null;
+  publisher: string | null;
+  publishedDate: string | null;
+  isbn: string | null;
+  description: string | null;
+  language: string | null;
+  tags: string[];
+  epubPath: string | null;
+  hasEpub: boolean;
+  hasCover: boolean;
+  coverUrl: string | null;
+  hasReader: boolean;
+  audioStatus: "none" | "queued" | "converting" | "ready" | "error";
+  audioFormat: "opus" | "m4b" | null;
+  audioDurationSeconds: number | null;
+  chapterCount: number;
+  readingChapter: number | null;
+  readingPercent: number;
+  lastReadAt: string | null;
+  isLegacy: boolean;
+  createdAt: string;
+}
+
+export interface LibraryCatalogResponse {
+  items: CatalogBookDto[];
+  totalCount: number;
+  facets: LibraryFacetsDto;
+  booksRoot: string;
+  outputRoot: string;
+}
+
+export interface FolderScanSummaryDto {
+  added: number;
+  updated: number;
+  unchanged: number;
+  removed: number;
+  errors: string[];
+}
+
+export interface SetLibraryFolderResponse {
+  booksRoot: string;
+  scan: FolderScanSummaryDto;
+}
+
+export interface ImportBookResultDto {
+  fileName: string;
+  status: "imported" | "skipped" | "error";
+  bookId: string | null;
+  title: string | null;
+  reason: string | null;
+}
+
+export interface ImportBooksResponse {
+  results: ImportBookResultDto[];
+}
+
+export interface UpdateBookMetadataRequest {
+  title?: string | null;
+  author?: string | null;
+  series?: string | null;
+  seriesIndex?: number | null;
+  publisher?: string | null;
+  publishedDate?: string | null;
+  isbn?: string | null;
+  description?: string | null;
+  language?: string | null;
+  tags?: string[] | null;
 }
 
 /** Single resume position: chapter + ms only, so it is independent of layout. */
